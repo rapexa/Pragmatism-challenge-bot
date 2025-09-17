@@ -1,0 +1,11 @@
+telegram:
+  token: "8393627945:AAHkKTFifa26510j33mDC8jJBnsQPUhK-VQ"
+  channel_id: -1002962445949  # Channel ID: upload files (@uploadrobotfile)
+  group_link: "https://t.me/rapexa_gap"  # Group link
+
+database:
+  host: "localhost"
+  port: 3306
+  user: "root"
+  password: "your_password"  # Replace with your MySQL password
+  name: "telegram_bot"

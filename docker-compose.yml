@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: telegram_bot_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: your_password
+      MYSQL_DATABASE: telegram_bot
+      MYSQL_USER: bot_user
+      MYSQL_PASSWORD: bot_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - telegram_bot_network
+
+  bot:
+    build: .
+    container_name: telegram_bot
+    depends_on:
+      - mysql
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=bot_user
+      - DB_PASSWORD=bot_password
+      - DB_NAME=telegram_bot
+    volumes:
+      - ./config.yaml:/root/config.yaml
+    networks:
+      - telegram_bot_network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+
+networks:
+  telegram_bot_network:
+    driver: bridge

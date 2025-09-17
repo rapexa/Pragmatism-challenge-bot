@@ -1,2 +1,157 @@
-# Pragmatism-challenge-bot
-Pragmatism-Challenge-Bot is a lightweight Telegram bot that helps users take part in small daily or weekly challenges. It provides simple commands to start, track, and complete tasks, making it easy to stay consistent and accountable.
+# ربات تلگرام ثبت نام کاربران
+
+این پروژه یک ربات تلگرام است که به صورت خودکار فرآیند ثبت نام کاربران را مدیریت می‌کند و ویدیوهای آموزشی همراه با اطلاعات پشتیبانی ارسال می‌کند.
+
+## ویژگی‌ها
+
+- ✅ ثبت نام کاربران با دریافت نام، نام خانوادگی، شماره تماس و شغل
+- ✅ ذخیره اطلاعات در دیتابیس MySQL
+- ✅ ارسال ویدیو آموزشی پس از ثبت نام
+- ✅ انتخاب تصادفی پشتیبان از دیتابیس
+- ✅ ارسال اطلاعات پشتیبان و لینک گروه
+- ✅ معماری تمیز و جداسازی لایه‌ها
+- ✅ لاگ‌های انگلیسی برای توسعه‌دهندگان و پیام‌های فارسی برای کاربران
+
+## تکنولوژی‌های استفاده شده
+
+- **Go (Golang)**: زبان برنامه‌نویسی اصلی
+- **Viper**: مدیریت کانفیگ
+- **GORM**: ORM برای کار با دیتابیس
+- **MySQL**: دیتابیس
+- **Telegram Bot API**: ارتباط با تلگرام
+- **Docker**: کانتینرسازی
+
+## ساختار پروژه
+
+```
+telegram-bot/
+├── main.go                     # فایل اصلی برنامه
+├── config.yaml                 # فایل کانفیگ
+├── go.mod                      # وابستگی‌های Go
+├── internal/
+│   ├── config/                 # مدیریت کانفیگ
+│   │   └── config.go
+│   ├── database/               # اتصال به دیتابیس
+│   │   └── database.go
+│   ├── models/                 # مدل‌های دیتا
+│   │   ├── user.go
+│   │   └── support.go
+│   ├── services/               # منطق کسب و کار
+│   │   ├── user_service.go
+│   │   ├── support_service.go
+│   │   └── support_admin_service.go
+│   └── handlers/               # کنترلرهای ربات
+│       └── bot_handler.go
+├── Dockerfile                  # کانفیگ Docker
+├── docker-compose.yml          # Docker Compose
+└── README.md                   # مستندات
+```
+
+## راه‌اندازی
+
+### پیش‌نیازها
+
+- Go 1.21 یا بالاتر
+- MySQL 8.0 یا بالاتر
+- Docker (اختیاری)
+
+### راه‌اندازی محلی
+
+1. **کلون کردن پروژه:**
+   ```bash
+   git clone <repository-url>
+   cd telegram-bot
+   ```
+
+2. **نصب وابستگی‌ها:**
+   ```bash
+   go mod tidy
+   ```
+
+3. **تنظیم کانفیگ:**
+   فایل `config.yaml` را ویرایش کنید:
+   ```yaml
+   telegram:
+     token: "YOUR_BOT_TOKEN"
+     channel_id: -1002962445949  # ID کانال منبع ویدیو
+     group_link: "https://t.me/rapexa_gap"  # لینک گروه
+
+   database:
+     host: "localhost"
+     port: 3306
+     user: "root"
+     password: "your_password"
+     name: "telegram_bot"
+   ```
+
+4. **ایجاد دیتابیس:**
+   ```sql
+   CREATE DATABASE telegram_bot CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+
+5. **اجرای برنامه:**
+   ```bash
+   go run main.go
+   ```
+
+### راه‌اندازی با Docker
+
+1. **تنظیم کانفیگ در docker-compose.yml**
+
+2. **اجرای کانتینرها:**
+   ```bash
+   docker-compose up -d
+   ```
+
+## نحوه استفاده
+
+1. کاربر دستور `/start` را ارسال می‌کند
+2. ربات نام و نام خانوادگی را درخواست می‌کند
+3. سپس شماره تماس را درخواست می‌کند
+4. در نهایت شغل کاربر را می‌پرسد
+5. پس از تکمیل ثبت نام، ویدیو آموزشی همراه با اطلاعات پشتیبان ارسال می‌شود
+
+## مدیریت پشتیبان‌ها
+
+پشتیبان‌ها در دیتابیس ذخیره می‌شوند و شامل اطلاعات زیر هستند:
+- نام پشتیبان
+- نام کاربری تلگرام (@username)
+- عکس پشتیبان
+- وضعیت فعال/غیرفعال
+
+پشتیبان‌های تستی که به صورت خودکار اضافه می‌شوند:
+- خانم فاطمه تقی زاده - @rapexam
+- خانم بهار قربانی - @rapexam  
+- خانم راضیه مزینانی - @rapexam
+
+## نحوه کار ربات با پست‌های کانال
+
+ربات به جای استفاده از File ID، پست مشخص شده را از کانال **کپی** می‌کند (بدون نشان دادن منبع):
+
+### تنظیمات فعلی:
+- **کانال منبع**: @uploadrobotfile (upload files)
+- **ID کانال**: -1002962445949
+- **شماره پست**: 2
+- **لینک پست**: https://t.me/uploadrobotfile/2
+- **گروه**: https://t.me/rapexa_gap
+
+### مزایای کپی کردن پست:
+- ✅ پست اصلی با تمام محتویات (caption، فرمت، و غیره) ارسال می‌شود
+- ✅ منبع کانال نشان داده نمی‌شود (بر خلاف Forward)
+- ✅ نیازی به File ID نیست
+- ✅ اگر پست در کانال تغییر کند، تغییرات به صورت خودکار اعمال می‌شود
+- ✅ حجم کد کمتر و پیاده‌سازی ساده‌تر
+
+## مشارکت
+
+برای مشارکت در این پروژه:
+
+1. Fork کنید
+2. برنچ جدید بسازید (`git checkout -b feature/amazing-feature`)
+3. تغییرات را commit کنید (`git commit -m 'Add amazing feature'`)
+4. Push کنید (`git push origin feature/amazing-feature`)
+5. Pull Request ایجاد کنید
+
+## لایسنس
+
+این پروژه تحت لایسنس MIT منتشر شده است.
