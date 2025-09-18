@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 	"telegram-bot/internal/config"
+	"telegram-bot/internal/keyboards"
 	"telegram-bot/internal/models"
 	"telegram-bot/internal/services"
 
@@ -127,16 +128,8 @@ func (h *BotHandler) handleNameInput(telegramID int64, text string) {
 	})
 
 	// Request phone number with keyboard
-	keyboard := tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButtonContact("📱 ارسال شماره تماس"),
-		),
-	)
-	keyboard.OneTimeKeyboard = true
-	keyboard.ResizeKeyboard = true
-
 	msg := tgbotapi.NewMessage(telegramID, fmt.Sprintf("سلام %s %s! 👋\n\nحالا لطفاً شماره تماس خود را ارسال کنید:", firstName, lastName))
-	msg.ReplyMarkup = keyboard
+	msg.ReplyMarkup = keyboards.PhoneRequestKeyboard()
 
 	h.bot.Send(msg)
 }
@@ -165,9 +158,8 @@ func (h *BotHandler) handlePhoneInput(telegramID int64, message *tgbotapi.Messag
 	})
 
 	// Remove keyboard and ask for job
-	removeKeyboard := tgbotapi.NewRemoveKeyboard(true)
 	msg := tgbotapi.NewMessage(telegramID, "عالی! ✅\n\nحالا لطفاً شغل خود را وارد کنید:")
-	msg.ReplyMarkup = removeKeyboard
+	msg.ReplyMarkup = keyboards.RemoveKeyboard()
 
 	h.bot.Send(msg)
 }

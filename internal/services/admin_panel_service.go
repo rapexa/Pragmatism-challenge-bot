@@ -70,7 +70,7 @@ func (s *AdminPanelService) ExportUsersToExcel() (string, error) {
 	}
 
 	// Set header
-	headers := []string{"ID", "Telegram ID", "First Name", "Last Name", "Phone", "Job", "Username", "Support Staff", "Active", "Created At"}
+	headers := []string{"ID", "Telegram ID", "First Name", "Last Name", "Phone", "Job", "Username/ID", "Support Staff", "Active", "Created At"}
 	for i, header := range headers {
 		cell := fmt.Sprintf("%c1", 'A'+i)
 		f.SetCellValue(sheetName, cell, header)
@@ -87,13 +87,19 @@ func (s *AdminPanelService) ExportUsersToExcel() (string, error) {
 			supportName = support.Name
 		}
 
+		// Determine username or telegram ID
+		usernameOrID := user.Username
+		if usernameOrID == "" {
+			usernameOrID = fmt.Sprintf("%d", user.TelegramID)
+		}
+
 		f.SetCellValue(sheetName, fmt.Sprintf("A%d", row), user.ID)
 		f.SetCellValue(sheetName, fmt.Sprintf("B%d", row), user.TelegramID)
 		f.SetCellValue(sheetName, fmt.Sprintf("C%d", row), user.FirstName)
 		f.SetCellValue(sheetName, fmt.Sprintf("D%d", row), user.LastName)
 		f.SetCellValue(sheetName, fmt.Sprintf("E%d", row), user.PhoneNumber)
 		f.SetCellValue(sheetName, fmt.Sprintf("F%d", row), user.Job)
-		f.SetCellValue(sheetName, fmt.Sprintf("G%d", row), user.Username)
+		f.SetCellValue(sheetName, fmt.Sprintf("G%d", row), usernameOrID)
 		f.SetCellValue(sheetName, fmt.Sprintf("H%d", row), supportName)
 		f.SetCellValue(sheetName, fmt.Sprintf("I%d", row), user.IsActive)
 		f.SetCellValue(sheetName, fmt.Sprintf("J%d", row), user.CreatedAt.Format("2006-01-02 15:04:05"))

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"telegram-bot/internal/config"
+	"telegram-bot/internal/keyboards"
 	"telegram-bot/internal/services"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -40,50 +41,65 @@ func (h *AdminHandler) HandleAdminUpdate(update tgbotapi.Update, telegramID int6
 func (h *AdminHandler) handleAdminMessage(message *tgbotapi.Message, telegramID int64) {
 	text := message.Text
 
+	// Handle navigation buttons that should clear any state
+	switch text {
+	case "🔙 بازگشت به پنل مدیریت":
+		delete(h.adminStates, telegramID)
+		h.sendAdminMainMenu(telegramID)
+		return
+	case "❌ لغو عملیات":
+		delete(h.adminStates, telegramID)
+		h.sendAdminMainMenu(telegramID)
+		return
+	case "📊 آمار کاربران":
+		delete(h.adminStates, telegramID)
+		h.sendUserStats(telegramID)
+		return
+	case "📋 خروجی اکسل کاربران":
+		delete(h.adminStates, telegramID)
+		h.exportUsers(telegramID)
+		return
+	case "👥 مدیریت پشتیبان‌ها":
+		delete(h.adminStates, telegramID)
+		h.sendSupportManagementMenu(telegramID)
+		return
+	case "➕ افزودن پشتیبان":
+		delete(h.adminStates, telegramID)
+		h.startAddSupport(telegramID)
+		return
+	case "📝 ویرایش پشتیبان":
+		delete(h.adminStates, telegramID)
+		h.showSupportList(telegramID, "edit")
+		return
+	case "🗑 حذف پشتیبان":
+		delete(h.adminStates, telegramID)
+		h.showSupportList(telegramID, "delete")
+		return
+	case "🎬 تنظیمات ویدیو":
+		delete(h.adminStates, telegramID)
+		h.sendVideoSettings(telegramID)
+		return
+	}
+
 	// Handle states for multi-step operations
 	if state, exists := h.adminStates[telegramID]; exists {
 		h.handleAdminState(message, telegramID, state)
 		return
 	}
 
-	// Handle commands and text
-	switch {
-	case message.Command() == "start" || text == "🏠 صفحه اصلی":
+	// Handle start command
+	if message.Command() == "start" {
 		h.sendAdminMainMenu(telegramID)
-	case text == "📊 آمار کاربران":
-		h.sendUserStats(telegramID)
-	case text == "📋 خروجی اکسل کاربران":
-		h.exportUsers(telegramID)
-	case text == "👥 مدیریت پشتیبان‌ها":
-		h.sendSupportManagementMenu(telegramID)
-	case text == "➕ افزودن پشتیبان":
-		h.startAddSupport(telegramID)
-	case text == "📝 ویرایش پشتیبان":
-		h.showSupportList(telegramID, "edit")
-	case text == "🗑 حذف پشتیبان":
-		h.showSupportList(telegramID, "delete")
-	case text == "🎬 تنظیمات ویدیو":
-		h.sendVideoSettings(telegramID)
-	default:
-		h.sendAdminMainMenu(telegramID)
+		return
 	}
+
+	// Default: show main menu
+	h.sendAdminMainMenu(telegramID)
 }
 
 func (h *AdminHandler) sendAdminMainMenu(telegramID int64) {
-	keyboard := tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("📊 آمار کاربران"),
-			tgbotapi.NewKeyboardButton("📋 خروجی اکسل کاربران"),
-		),
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("👥 مدیریت پشتیبان‌ها"),
-			tgbotapi.NewKeyboardButton("🎬 تنظیمات ویدیو"),
-		),
-	)
-	keyboard.ResizeKeyboard = true
-
 	msg := tgbotapi.NewMessage(telegramID, "🔧 پنل مدیریت ربات\n\nیکی از گزینه‌های زیر را انتخاب کنید:")
-	msg.ReplyMarkup = keyboard
+	msg.ReplyMarkup = keyboards.AdminMainKeyboard()
 	h.bot.Send(msg)
 }
 
@@ -133,26 +149,17 @@ func (h *AdminHandler) exportUsers(telegramID int64) {
 }
 
 func (h *AdminHandler) sendSupportManagementMenu(telegramID int64) {
-	keyboard := tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("➕ افزودن پشتیبان"),
-			tgbotapi.NewKeyboardButton("📝 ویرایش پشتیبان"),
-		),
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("🗑 حذف پشتیبان"),
-			tgbotapi.NewKeyboardButton("🏠 صفحه اصلی"),
-		),
-	)
-	keyboard.ResizeKeyboard = true
-
 	msg := tgbotapi.NewMessage(telegramID, "👥 مدیریت پشتیبان‌ها\n\nیکی از گزینه‌های زیر را انتخاب کنید:")
-	msg.ReplyMarkup = keyboard
+	msg.ReplyMarkup = keyboards.SupportManagementKeyboard()
 	h.bot.Send(msg)
 }
 
 func (h *AdminHandler) startAddSupport(telegramID int64) {
 	h.adminStates[telegramID] = "add_support_name"
-	h.sendMessage(telegramID, "نام پشتیبان جدید را وارد کنید:")
+
+	msg := tgbotapi.NewMessage(telegramID, "نام پشتیبان جدید را وارد کنید:\n\n💡 برای لغو، روی ❌ لغو عملیات کلیک کنید")
+	msg.ReplyMarkup = keyboards.CancelOperationKeyboard()
+	h.bot.Send(msg)
 }
 
 func (h *AdminHandler) showSupportList(telegramID int64, action string) {
@@ -208,19 +215,28 @@ func (h *AdminHandler) sendVideoSettings(telegramID int64) {
 📺 کانال: %d
 🆔 شماره پست فعلی: %d
 
-برای تغییر شماره پست، عدد جدید را ارسال کنید:`,
+برای تغییر شماره پست، عدد جدید را ارسال کنید:
+
+💡 برای لغو، روی ❌ لغو عملیات کلیک کنید`,
 		h.config.Telegram.ChannelID,
 		currentMessageID)
 
 	h.adminStates[telegramID] = "change_video_message_id"
-	h.sendMessage(telegramID, message)
+
+	msg := tgbotapi.NewMessage(telegramID, message)
+	msg.ReplyMarkup = keyboards.CancelOperationKeyboard()
+	h.bot.Send(msg)
 }
 
 func (h *AdminHandler) handleAdminState(message *tgbotapi.Message, telegramID int64, state string) {
 	switch state {
 	case "add_support_name":
 		h.adminStates[telegramID] = "add_support_username:" + message.Text
-		h.sendMessage(telegramID, "نام کاربری پشتیبان را وارد کنید (مثال: @username):")
+
+		msg := tgbotapi.NewMessage(telegramID, "نام کاربری پشتیبان را وارد کنید (مثال: @username):\n\n💡 برای لغو، روی ❌ لغو عملیات کلیک کنید")
+		msg.ReplyMarkup = keyboards.CancelOperationKeyboard()
+		h.bot.Send(msg)
+		return
 
 	case "change_video_message_id":
 		if messageID, err := strconv.Atoi(message.Text); err == nil && messageID > 0 {
