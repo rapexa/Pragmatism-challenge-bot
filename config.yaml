@@ -18,8 +18,8 @@ server:
   port: "8081"  # Port for file server (separate from main app)
 
 sms:
-  apikey: "OWYzZmNmNGYtZjEzMi00YjIyLWJhMzgtYmFjZjQ3NWFmMjIxMDcwZGE0ZWMwZDcyYzAxNjcxZDlkMjU0MzAzZmJhMGY="
+  apikey: "OWZlN2Q5NDMtYjY1OS00MzZmLTk5MTgtNzgxNmFmMDMxMzY4OTBhZjU2NWZlNjViMzNhODliMWQyOGJjYWUzMzNiNTQ="
   from_number: "+983000505"
   base_url: "https://api2.ippanel.com/api/v1"
   patterns:
-    registration: "kii5iwrowp477q4"
+    registration: "0fvxstcgdfasjhu"
