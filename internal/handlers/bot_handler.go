@@ -179,7 +179,7 @@ func (h *BotHandler) handleJobInput(telegramID int64, job string) {
 	h.sendMessage(telegramID, "🎉 ثبت نام شما با موفقیت تکمیل شد!\n\nدر حال ارسال ویدیو...")
 
 	// Get user with support info for sending video
-	user, support, err := h.userService.GetUserWithSupport(telegramID)
+	_, support, err := h.userService.GetUserWithSupport(telegramID)
 	if err != nil || support == nil {
 		log.Printf("Error getting user support info: %v", err)
 		h.sendMessage(telegramID, "خطایی در دریافت اطلاعات پشتیبانی رخ داده است.")
