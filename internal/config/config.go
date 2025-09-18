@@ -9,6 +9,7 @@ import (
 type Config struct {
 	Telegram TelegramConfig `mapstructure:"telegram"`
 	Database DatabaseConfig `mapstructure:"database"`
+	Video    VideoConfig    `mapstructure:"video"`
 }
 
 type TelegramConfig struct {
@@ -23,6 +24,10 @@ type DatabaseConfig struct {
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	Name     string `mapstructure:"name"`
+}
+
+type VideoConfig struct {
+	MessageID int `mapstructure:"message_id"`
 }
 
 func Load() *Config {

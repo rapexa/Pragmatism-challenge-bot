@@ -22,11 +22,19 @@ func main() {
 	// Initialize services
 	userService := services.NewUserService(db)
 	supportService := services.NewSupportService(db)
+	adminPanelService := services.NewAdminPanelService(db)
+	configService := services.NewConfigService(cfg)
 
 	// Initialize test support staff data
 	err := supportService.InitializeTestData()
 	if err != nil {
 		log.Printf("Error initializing test support staff data: %v", err)
+	}
+
+	// Initialize default admin
+	err = adminPanelService.InitializeDefaultAdmin()
+	if err != nil {
+		log.Printf("Error initializing default admin: %v", err)
 	}
 
 	// Initialize Telegram bot
@@ -39,7 +47,7 @@ func main() {
 	log.Printf("Bot %s started successfully", bot.Self.UserName)
 
 	// Initialize bot handler
-	botHandler := handlers.NewBotHandler(bot, userService, supportService, cfg)
+	botHandler := handlers.NewBotHandler(bot, userService, supportService, adminPanelService, configService, cfg)
 
 	// Set up webhook or polling
 	u := tgbotapi.NewUpdate(0)

@@ -9,3 +9,6 @@ database:
   user: "appuser"
   password: "app_password"
   name: "telegram_bot"
+
+video:
+  message_id: 2  # Default message ID from channel

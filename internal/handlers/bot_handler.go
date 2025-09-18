@@ -12,22 +12,45 @@ import (
 )
 
 type BotHandler struct {
-	bot            *tgbotapi.BotAPI
-	userService    *services.UserService
-	supportService *services.SupportService
-	config         *config.Config
+	bot               *tgbotapi.BotAPI
+	userService       *services.UserService
+	supportService    *services.SupportService
+	adminPanelService *services.AdminPanelService
+	adminHandler      *AdminHandler
+	config            *config.Config
 }
 
-func NewBotHandler(bot *tgbotapi.BotAPI, userService *services.UserService, supportService *services.SupportService, cfg *config.Config) *BotHandler {
+func NewBotHandler(bot *tgbotapi.BotAPI, userService *services.UserService, supportService *services.SupportService, adminPanelService *services.AdminPanelService, configService *services.ConfigService, cfg *config.Config) *BotHandler {
+	adminHandler := NewAdminHandler(bot, adminPanelService, configService, cfg)
+
 	return &BotHandler{
-		bot:            bot,
-		userService:    userService,
-		supportService: supportService,
-		config:         cfg,
+		bot:               bot,
+		userService:       userService,
+		supportService:    supportService,
+		adminPanelService: adminPanelService,
+		adminHandler:      adminHandler,
+		config:            cfg,
 	}
 }
 
 func (h *BotHandler) HandleUpdate(update tgbotapi.Update) {
+	var telegramID int64
+
+	if update.Message != nil {
+		telegramID = update.Message.From.ID
+	} else if update.CallbackQuery != nil {
+		telegramID = update.CallbackQuery.From.ID
+	} else {
+		return
+	}
+
+	// Check if user is admin
+	if h.adminPanelService.IsAdmin(telegramID) {
+		h.adminHandler.HandleAdminUpdate(update, telegramID)
+		return
+	}
+
+	// Handle regular user updates
 	if update.Message != nil {
 		h.handleMessage(update.Message)
 	}
@@ -192,12 +215,17 @@ func (h *BotHandler) handleJobInput(telegramID int64, job string) {
 
 func (h *BotHandler) sendVideoWithSupport(telegramID int64, support *models.SupportStaff) {
 	// Copy the specific message from the channel with custom caption
+	messageID := h.config.Video.MessageID
+	if messageID == 0 {
+		messageID = 2 // Default fallback
+	}
+
 	copyConfig := tgbotapi.CopyMessageConfig{
 		BaseChat: tgbotapi.BaseChat{
 			ChatID: telegramID,
 		},
 		FromChatID: h.config.Telegram.ChannelID,
-		MessageID:  2, // Post number 2 from the channel
+		MessageID:  messageID,
 		Caption:    "ثبت نام شما با موفقیت انجام شد",
 	}
 
@@ -215,15 +243,6 @@ func (h *BotHandler) sendVideoWithSupport(telegramID int64, support *models.Supp
 		return
 	}
 
-	// Send support info message
-	supportMessage := fmt.Sprintf("👤 پشتیبان شما: %s\n📞 آیدی پشتیبان: %s\n🔗 لینک گروه: %s",
-		support.Name,
-		support.Username,
-		h.config.Telegram.GroupLink,
-	)
-
-	h.sendMessage(telegramID, supportMessage)
-
 	// Send support photo with complete info as caption
 	if support.PhotoURL != "" {
 		photo := tgbotapi.NewPhoto(telegramID, tgbotapi.FileURL(support.PhotoURL))
@@ -233,6 +252,14 @@ func (h *BotHandler) sendVideoWithSupport(telegramID int64, support *models.Supp
 			h.config.Telegram.GroupLink,
 		)
 		h.bot.Send(photo)
+	} else {
+		// If no photo available, send text message
+		supportMessage := fmt.Sprintf("👤 پشتیبان شما: %s\n📞 آیدی پشتیبان: %s\n🔗 لینک گروه: %s",
+			support.Name,
+			support.Username,
+			h.config.Telegram.GroupLink,
+		)
+		h.sendMessage(telegramID, supportMessage)
 	}
 }
 
