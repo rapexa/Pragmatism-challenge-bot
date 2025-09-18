@@ -33,7 +33,7 @@ func NewFileService(bot *tgbotapi.BotAPI, serverURL string) *FileService {
 	}
 }
 
-// DownloadPhoto downloads a photo from Telegram and saves it locally, returns the public URL
+// DownloadPhoto downloads a photo from Telegram and saves it locally, returns the local path
 func (s *FileService) DownloadPhoto(fileID string) (string, error) {
 	// Get file info from Telegram
 	file, err := s.bot.GetFile(tgbotapi.FileConfig{FileID: fileID})
@@ -67,10 +67,9 @@ func (s *FileService) DownloadPhoto(fileID string) (string, error) {
 		return "", fmt.Errorf("failed to save file: %v", err)
 	}
 
-	// Return public URL
-	publicURL := fmt.Sprintf("%s/uploads/%s", s.serverURL, filename)
-	log.Printf("Photo saved successfully: %s -> %s", localPath, publicURL)
-	return publicURL, nil
+	// Return local path for Telegram file sending
+	log.Printf("Photo saved successfully: %s", localPath)
+	return localPath, nil
 }
 
 // GetPhotoPath returns the full path for a photo file

@@ -544,15 +544,15 @@ func (h *AdminHandler) handlePhotoUpload(message *tgbotapi.Message, telegramID i
 	// Download and save photo
 	h.sendMessage(telegramID, "در حال ذخیره عکس...")
 
-	publicURL, err := h.fileService.DownloadPhoto(largestPhoto.FileID)
+	localPath, err := h.fileService.DownloadPhoto(largestPhoto.FileID)
 	if err != nil {
 		log.Printf("Error downloading photo: %v", err)
 		h.sendMessage(telegramID, "خطا در ذخیره عکس")
 		return
 	}
 
-	// Update support staff photo URL with public URL
-	err = h.adminPanelService.UpdateSupportStaffField(uint(id), "photo_url", publicURL)
+	// Update support staff photo URL with local path
+	err = h.adminPanelService.UpdateSupportStaffField(uint(id), "photo_url", localPath)
 	if err != nil {
 		log.Printf("Error updating support staff photo: %v", err)
 		h.sendMessage(telegramID, "خطا در ویرایش عکس پشتیبان")

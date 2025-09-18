@@ -72,13 +72,13 @@ func (h *BotHandler) handleMessage(message *tgbotapi.Message) {
 
 	// If user is registered and sends /start, send video
 	if user != nil && message.Command() == "start" {
-		h.sendVideoWithSupport(telegramID, support)
+		h.sendWelcomeBackMessage(telegramID, user, support)
 		return
 	}
 
 	// If user is registered but sends other messages
 	if user != nil {
-		h.sendMessage(telegramID, "شما قبلاً ثبت نام کرده‌اید. از ربات استفاده کنید.")
+		h.sendMessage(telegramID, "سلام دوست عزیز! 👋\n\nشما قبلاً در ربات ثبت نام کرده‌اید.\n\nبرای مشاهده مجدد ویدیو و اطلاعات پشتیبان، دستور /start را ارسال کنید.")
 		return
 	}
 
@@ -93,7 +93,12 @@ func (h *BotHandler) handleRegistration(message *tgbotapi.Message) {
 	// Check if it's start command
 	if message.Command() == "start" {
 		h.userService.StartRegistration(telegramID)
-		h.sendMessage(telegramID, "سلام! به ربات ما خوش آمدید 🌟\n\nلطفاً نام و نام خانوادگی خود را وارد کنید:\n(مثال: احمد احمدی)")
+		welcomeMessage := `سلام! به ربات چالش عملگرایی خوش آمدید! 🌟
+
+برای شروع، لطفاً نام و نام خانوادگی خود را وارد کنید:
+
+📝 مثال: احمد احمدی`
+		h.sendMessage(telegramID, welcomeMessage)
 		return
 	}
 
@@ -117,7 +122,10 @@ func (h *BotHandler) handleRegistration(message *tgbotapi.Message) {
 func (h *BotHandler) handleNameInput(telegramID int64, text string) {
 	parts := strings.Fields(text)
 	if len(parts) < 2 {
-		h.sendMessage(telegramID, "لطفاً نام و نام خانوادگی خود را به صورت کامل وارد کنید.\n(مثال: احمد احمدی)")
+		errorMessage := `❌ لطفاً نام و نام خانوادگی خود را به صورت کامل وارد کنید.
+
+📝 مثال صحیح: احمد احمدی`
+		h.sendMessage(telegramID, errorMessage)
 		return
 	}
 
@@ -130,7 +138,13 @@ func (h *BotHandler) handleNameInput(telegramID int64, text string) {
 	})
 
 	// Request phone number with keyboard
-	msg := tgbotapi.NewMessage(telegramID, fmt.Sprintf("سلام %s %s! 👋\n\nحالا لطفاً شماره تماس خود را ارسال کنید:", firstName, lastName))
+	phoneMessage := fmt.Sprintf(`عالی %s عزیز! ✅
+
+حالا لطفاً شماره تماس خود را ارسال کنید:
+
+📱 می‌توانید از دکمه زیر استفاده کنید یا شماره را تایپ کنید`, firstName)
+
+	msg := tgbotapi.NewMessage(telegramID, phoneMessage)
 	msg.ReplyMarkup = keyboards.PhoneRequestKeyboard()
 
 	h.bot.Send(msg)
@@ -145,13 +159,29 @@ func (h *BotHandler) handlePhoneInput(telegramID int64, message *tgbotapi.Messag
 	} else if message.Text != "" {
 		phoneNumber = message.Text
 	} else {
-		h.sendMessage(telegramID, "لطفاً شماره تماس خود را ارسال کنید یا از دکمه زیر استفاده کنید.")
+		retryMessage := `📱 شماره تماس دریافت نشد!
+
+لطفاً یکی از روش‌های زیر را انتخاب کنید:
+• از دکمه "📱 ارسال شماره تماس" استفاده کنید
+• یا شماره خود را تایپ کنید (مثال: 09123456789)`
+
+		msg := tgbotapi.NewMessage(telegramID, retryMessage)
+		msg.ReplyMarkup = keyboards.PhoneRequestKeyboard()
+		h.bot.Send(msg)
 		return
 	}
 
 	// Validate phone number (basic validation)
 	if len(phoneNumber) < 10 {
-		h.sendMessage(telegramID, "شماره تماس وارد شده معتبر نیست. لطفاً دوباره تلاش کنید.")
+		errorMessage := `❌ شماره تماس وارد شده معتبر نیست!
+
+📱 لطفاً شماره تماس معتبر وارد کنید:
+• مثال: 09123456789
+• یا از دکمه ارسال شماره استفاده کنید`
+
+		msg := tgbotapi.NewMessage(telegramID, errorMessage)
+		msg.ReplyMarkup = keyboards.PhoneRequestKeyboard()
+		h.bot.Send(msg)
 		return
 	}
 
@@ -160,7 +190,13 @@ func (h *BotHandler) handlePhoneInput(telegramID int64, message *tgbotapi.Messag
 	})
 
 	// Remove keyboard and ask for job
-	msg := tgbotapi.NewMessage(telegramID, "عالی! ✅\n\nحالا لطفاً شغل خود را وارد کنید:")
+	jobMessage := `عالی! شماره تماس شما ثبت شد ✅
+
+حالا لطفاً شغل یا تخصص خود را وارد کنید:
+
+💼 مثال: مهندس نرم‌افزار، معلم، پزشک، دانشجو و ...`
+
+	msg := tgbotapi.NewMessage(telegramID, jobMessage)
 	msg.ReplyMarkup = keyboards.RemoveKeyboard()
 
 	h.bot.Send(msg)
@@ -168,7 +204,17 @@ func (h *BotHandler) handlePhoneInput(telegramID int64, message *tgbotapi.Messag
 
 func (h *BotHandler) handleJobInput(telegramID int64, job string) {
 	if strings.TrimSpace(job) == "" {
-		h.sendMessage(telegramID, "لطفاً شغل خود را وارد کنید.")
+		jobErrorMessage := `💼 شغل وارد نشده!
+
+لطفاً شغل یا تخصص خود را وارد کنید:
+
+📝 مثال‌هایی از شغل‌ها:
+• مهندس نرم‌افزار
+• معلم ریاضی  
+• پزشک عمومی
+• دانشجوی پزشکی
+• کارمند اداری`
+		h.sendMessage(telegramID, jobErrorMessage)
 		return
 	}
 
@@ -193,7 +239,13 @@ func (h *BotHandler) handleJobInput(telegramID int64, job string) {
 		return
 	}
 
-	h.sendMessage(telegramID, "🎉 ثبت نام شما با موفقیت تکمیل شد!\n\nدر حال ارسال ویدیو...")
+	successMessage := `🎉 تبریک! ثبت نام شما با موفقیت تکمیل شد!
+
+لطفاً ویدیو آموزشی بالا را مشاهده کنید 👆
+
+در حال ارسال اطلاعات پشتیبان شما...`
+
+	h.sendMessage(telegramID, successMessage)
 
 	// Get user with support info for sending video
 	_, support, err := h.userService.GetUserWithSupport(telegramID)
@@ -207,7 +259,24 @@ func (h *BotHandler) handleJobInput(telegramID int64, job string) {
 	h.sendVideoWithSupport(telegramID, support)
 }
 
+func (h *BotHandler) sendWelcomeBackMessage(telegramID int64, user *models.User, support *models.SupportStaff) {
+	welcomeBackMessage := fmt.Sprintf(`سلام مجدد %s عزیز! 👋
+
+خوش برگشتید! 🌟
+
+در حال ارسال مجدد ویدیو آموزشی و اطلاعات پشتیبان شما...`, user.FirstName)
+
+	h.sendMessage(telegramID, welcomeBackMessage)
+
+	// Send video with different caption for returning users
+	h.sendVideoWithSupportAndCaption(telegramID, support, "ویدیو آموزشی ربات چالش عملگرایی")
+}
+
 func (h *BotHandler) sendVideoWithSupport(telegramID int64, support *models.SupportStaff) {
+	h.sendVideoWithSupportAndCaption(telegramID, support, "ثبت نام شما با موفقیت انجام شد")
+}
+
+func (h *BotHandler) sendVideoWithSupportAndCaption(telegramID int64, support *models.SupportStaff, caption string) {
 	// Copy the specific message from the channel with custom caption
 	messageID := h.config.Video.MessageID
 	if messageID == 0 {
@@ -220,7 +289,7 @@ func (h *BotHandler) sendVideoWithSupport(telegramID int64, support *models.Supp
 		},
 		FromChatID: h.config.Telegram.ChannelID,
 		MessageID:  messageID,
-		Caption:    "ثبت نام شما با موفقیت انجام شد",
+		Caption:    caption,
 	}
 
 	_, err := h.bot.Send(copyConfig)
@@ -239,8 +308,26 @@ func (h *BotHandler) sendVideoWithSupport(telegramID int64, support *models.Supp
 
 	// Send support photo with complete info as caption
 	if support.PhotoURL != "" {
-		photo := tgbotapi.NewPhoto(telegramID, tgbotapi.FileURL(support.PhotoURL))
-		photo.Caption = fmt.Sprintf("👤 پشتیبان شما: %s\n📞 آیدی پشتیبان: %s\n🔗 لینک گروه: %s",
+		var photo tgbotapi.PhotoConfig
+
+		// Check if it's a local file or external URL
+		if strings.HasPrefix(support.PhotoURL, "uploads/") || (!strings.HasPrefix(support.PhotoURL, "http")) {
+			// Local file - send as file path
+			photo = tgbotapi.NewPhoto(telegramID, tgbotapi.FilePath(support.PhotoURL))
+		} else {
+			// External URL
+			photo = tgbotapi.NewPhoto(telegramID, tgbotapi.FileURL(support.PhotoURL))
+		}
+
+		photo.Caption = fmt.Sprintf(`👨‍💼 پشتیبان اختصاصی شما:
+
+👤 نام: %s
+📞 آیدی تلگرام: %s
+
+🔗 لینک گروه VIP:
+%s
+
+💬 برای ارتباط با پشتیبان، روی آیدی بالا کلیک کنید`,
 			support.Name,
 			support.Username,
 			h.config.Telegram.GroupLink,
@@ -248,7 +335,15 @@ func (h *BotHandler) sendVideoWithSupport(telegramID int64, support *models.Supp
 		h.bot.Send(photo)
 	} else {
 		// If no photo available, send text message
-		supportMessage := fmt.Sprintf("👤 پشتیبان شما: %s\n📞 آیدی پشتیبان: %s\n🔗 لینک گروه: %s",
+		supportMessage := fmt.Sprintf(`👨‍💼 پشتیبان اختصاصی شما:
+
+👤 نام: %s
+📞 آیدی تلگرام: %s
+
+🔗 لینک گروه VIP:
+%s
+
+💬 برای ارتباط با پشتیبان، روی آیدی بالا کلیک کنید`,
 			support.Name,
 			support.Username,
 			h.config.Telegram.GroupLink,
