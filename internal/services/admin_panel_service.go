@@ -39,13 +39,27 @@ func (s *AdminPanelService) CreateAdmin(telegramID int64, firstName, username st
 
 // InitializeDefaultAdmin creates the default admin if not exists
 func (s *AdminPanelService) InitializeDefaultAdmin() error {
-	var count int64
-	s.db.DB.Model(&models.Admin{}).Where("telegram_id = ?", 76599340).Count(&count)
-	if count > 0 {
-		return nil // Admin already exists
+	// Initialize first admin (RAPEXA)
+	var count1 int64
+	s.db.DB.Model(&models.Admin{}).Where("telegram_id = ?", 76599340).Count(&count1)
+	if count1 == 0 {
+		err := s.CreateAdmin(76599340, "RAPEXA", "@Rapexam")
+		if err != nil {
+			return err
+		}
 	}
 
-	return s.CreateAdmin(76599340, "RAPEXA", "@Rapexam")
+	// Initialize second admin (حسین مهری)
+	var count2 int64
+	s.db.DB.Model(&models.Admin{}).Where("telegram_id = ?", 363999066).Count(&count2)
+	if count2 == 0 {
+		err := s.CreateAdmin(363999066, "حسین مهری", "@hosseinmehri_ir")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ExportUsersToExcel exports all users to Excel file
