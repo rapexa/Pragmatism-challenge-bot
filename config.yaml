@@ -6,6 +6,6 @@ telegram:
 database:
   host: "localhost"
   port: 3306
-  user: "root"
-  password: "your_password"  # Replace with your MySQL password
+  user: "appuser"
+  password: "app_password"
   name: "telegram_bot"
