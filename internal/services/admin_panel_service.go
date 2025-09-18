@@ -178,6 +178,11 @@ func (s *AdminPanelService) UpdateSupportStaff(id uint, name, username, photoURL
 	}).Error
 }
 
+// UpdateSupportStaffField updates a specific field of support staff
+func (s *AdminPanelService) UpdateSupportStaffField(id uint, field, value string) error {
+	return s.db.DB.Model(&models.SupportStaff{}).Where("id = ?", id).Update(field, value).Error
+}
+
 // DeleteSupportStaff soft deletes support staff
 func (s *AdminPanelService) DeleteSupportStaff(id uint) error {
 	return s.db.DB.Delete(&models.SupportStaff{}, id).Error

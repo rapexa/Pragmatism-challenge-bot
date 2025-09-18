@@ -17,6 +17,9 @@ func AdminMainKeyboard() tgbotapi.ReplyKeyboardMarkup {
 			tgbotapi.NewKeyboardButton("👥 مدیریت پشتیبان‌ها"),
 			tgbotapi.NewKeyboardButton("🎬 تنظیمات ویدیو"),
 		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("🔗 تنظیمات گروه"),
+		),
 	)
 	keyboard.ResizeKeyboard = true
 	return keyboard
@@ -70,6 +73,21 @@ func PhoneRequestKeyboard() tgbotapi.ReplyKeyboardMarkup {
 		),
 	)
 	keyboard.OneTimeKeyboard = true
+	keyboard.ResizeKeyboard = true
+	return keyboard
+}
+
+// PhotoUploadKeyboard returns keyboard for photo upload options
+func PhotoUploadKeyboard() tgbotapi.ReplyKeyboardMarkup {
+	keyboard := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("📤 آپلود عکس جدید"),
+			tgbotapi.NewKeyboardButton("🔗 وارد کردن لینک"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("❌ لغو عملیات"),
+		),
+	)
 	keyboard.ResizeKeyboard = true
 	return keyboard
 }

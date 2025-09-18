@@ -17,18 +17,20 @@ type BotHandler struct {
 	userService       *services.UserService
 	supportService    *services.SupportService
 	adminPanelService *services.AdminPanelService
+	fileService       *services.FileService
 	adminHandler      *AdminHandler
 	config            *config.Config
 }
 
-func NewBotHandler(bot *tgbotapi.BotAPI, userService *services.UserService, supportService *services.SupportService, adminPanelService *services.AdminPanelService, configService *services.ConfigService, cfg *config.Config) *BotHandler {
-	adminHandler := NewAdminHandler(bot, adminPanelService, configService, cfg)
+func NewBotHandler(bot *tgbotapi.BotAPI, userService *services.UserService, supportService *services.SupportService, adminPanelService *services.AdminPanelService, configService *services.ConfigService, fileService *services.FileService, cfg *config.Config) *BotHandler {
+	adminHandler := NewAdminHandler(bot, adminPanelService, configService, fileService, cfg)
 
 	return &BotHandler{
 		bot:               bot,
 		userService:       userService,
 		supportService:    supportService,
 		adminPanelService: adminPanelService,
+		fileService:       fileService,
 		adminHandler:      adminHandler,
 		config:            cfg,
 	}

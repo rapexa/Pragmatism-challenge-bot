@@ -12,3 +12,7 @@ database:
 
 video:
   message_id: 2  # Default message ID from channel
+
+server:
+  url: "http://localhost:8081"  # Your server URL for serving uploaded files
+  port: "8081"  # Port for file server (separate from main app)

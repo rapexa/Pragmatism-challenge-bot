@@ -10,6 +10,7 @@ type Config struct {
 	Telegram TelegramConfig `mapstructure:"telegram"`
 	Database DatabaseConfig `mapstructure:"database"`
 	Video    VideoConfig    `mapstructure:"video"`
+	Server   ServerConfig   `mapstructure:"server"`
 }
 
 type TelegramConfig struct {
@@ -28,6 +29,11 @@ type DatabaseConfig struct {
 
 type VideoConfig struct {
 	MessageID int `mapstructure:"message_id"`
+}
+
+type ServerConfig struct {
+	URL  string `mapstructure:"url"`
+	Port string `mapstructure:"port"`
 }
 
 func Load() *Config {
