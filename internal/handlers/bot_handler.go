@@ -8,6 +8,7 @@ import (
 	"telegram-bot/internal/keyboards"
 	"telegram-bot/internal/models"
 	"telegram-bot/internal/services"
+	"telegram-bot/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -18,11 +19,12 @@ type BotHandler struct {
 	supportService    *services.SupportService
 	adminPanelService *services.AdminPanelService
 	fileService       *services.FileService
+	smsService        *services.SMSService
 	adminHandler      *AdminHandler
 	config            *config.Config
 }
 
-func NewBotHandler(bot *tgbotapi.BotAPI, userService *services.UserService, supportService *services.SupportService, adminPanelService *services.AdminPanelService, configService *services.ConfigService, fileService *services.FileService, cfg *config.Config) *BotHandler {
+func NewBotHandler(bot *tgbotapi.BotAPI, userService *services.UserService, supportService *services.SupportService, adminPanelService *services.AdminPanelService, configService *services.ConfigService, fileService *services.FileService, smsService *services.SMSService, cfg *config.Config) *BotHandler {
 	adminHandler := NewAdminHandler(bot, adminPanelService, configService, fileService, cfg)
 
 	return &BotHandler{
@@ -31,6 +33,7 @@ func NewBotHandler(bot *tgbotapi.BotAPI, userService *services.UserService, supp
 		supportService:    supportService,
 		adminPanelService: adminPanelService,
 		fileService:       fileService,
+		smsService:        smsService,
 		adminHandler:      adminHandler,
 		config:            cfg,
 	}
@@ -171,30 +174,37 @@ func (h *BotHandler) handlePhoneInput(telegramID int64, message *tgbotapi.Messag
 		return
 	}
 
-	// Validate phone number (basic validation)
-	if len(phoneNumber) < 10 {
-		errorMessage := `❌ شماره تماس وارد شده معتبر نیست!
-
-📱 لطفاً شماره تماس معتبر وارد کنید:
-• مثال: 09123456789
-• یا از دکمه ارسال شماره استفاده کنید`
-
-		msg := tgbotapi.NewMessage(telegramID, errorMessage)
+	// Validate Iranian phone number
+	isValid, normalizedPhone := utils.ValidateIranianPhoneNumber(phoneNumber)
+	if !isValid {
+		msg := tgbotapi.NewMessage(telegramID, utils.GetPhoneNumberError())
 		msg.ReplyMarkup = keyboards.PhoneRequestKeyboard()
 		h.bot.Send(msg)
 		return
 	}
+
+	// Use normalized phone number
+	phoneNumber = normalizedPhone
 
 	h.userService.UpdateRegistrationState(telegramID, "waiting_job", map[string]string{
 		"phone_number": phoneNumber,
 	})
 
 	// Remove keyboard and ask for job
-	jobMessage := `عالی! شماره تماس شما ثبت شد ✅
+	formattedPhone := utils.FormatIranianPhoneNumber(phoneNumber)
+	jobMessage := fmt.Sprintf(`عالی! شماره تماس شما ثبت شد ✅
+
+📱 شماره ثبت شده: %s
 
 حالا لطفاً شغل یا تخصص خود را وارد کنید:
 
-💼 مثال: مهندس نرم‌افزار، معلم، پزشک، دانشجو و ...`
+💼 مثال‌هایی از شغل‌ها:
+• مهندس نرم‌افزار
+• معلم ریاضی
+• پزشک عمومی  
+• دانشجوی پزشکی
+• کارمند اداری
+• کارآفرین`, formattedPhone)
 
 	msg := tgbotapi.NewMessage(telegramID, jobMessage)
 	msg.ReplyMarkup = keyboards.RemoveKeyboard()
@@ -239,7 +249,19 @@ func (h *BotHandler) handleJobInput(telegramID int64, job string) {
 		return
 	}
 
+	// Send SMS notification
+	go func() {
+		smsErr := h.smsService.SendRegistrationSMS(state.PhoneNumber, state.FirstName)
+		if smsErr != nil {
+			log.Printf("Error sending registration SMS: %v", smsErr)
+		} else {
+			log.Printf("Registration SMS sent successfully to %s", state.PhoneNumber)
+		}
+	}()
+
 	successMessage := `🎉 تبریک! ثبت نام شما با موفقیت تکمیل شد!
+
+📱 پیامک تأیید به شماره شما ارسال شد
 
 لطفاً ویدیو آموزشی بالا را مشاهده کنید 👆
 

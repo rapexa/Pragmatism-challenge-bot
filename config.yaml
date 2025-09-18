@@ -16,3 +16,10 @@ video:
 server:
   url: "http://localhost:8081"  # Your server URL for serving uploaded files
   port: "8081"  # Port for file server (separate from main app)
+
+sms:
+  apikey: "OWYzZmNmNGYtZjEzMi00YjIyLWJhMzgtYmFjZjQ3NWFmMjIxMDcwZGE0ZWMwZDcyYzAxNjcxZDlkMjU0MzAzZmJhMGY="
+  from_number: "+983000505"
+  base_url: "https://api2.ippanel.com/api/v1"
+  patterns:
+    registration: "kii5iwrowp477q4"

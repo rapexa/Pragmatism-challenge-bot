@@ -39,6 +39,7 @@ func main() {
 	adminPanelService := services.NewAdminPanelService(db)
 	configService := services.NewConfigService(cfg)
 	fileService := services.NewFileService(bot, cfg.Server.URL)
+	smsService := services.NewSMSService(&cfg.SMS)
 
 	// Initialize test support staff data
 	err = supportService.InitializeTestData()
@@ -53,7 +54,7 @@ func main() {
 	}
 
 	// Initialize bot handler
-	botHandler := handlers.NewBotHandler(bot, userService, supportService, adminPanelService, configService, fileService, cfg)
+	botHandler := handlers.NewBotHandler(bot, userService, supportService, adminPanelService, configService, fileService, smsService, cfg)
 
 	// Set up webhook or polling
 	u := tgbotapi.NewUpdate(0)

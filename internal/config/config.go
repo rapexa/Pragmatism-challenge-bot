@@ -11,6 +11,7 @@ type Config struct {
 	Database DatabaseConfig `mapstructure:"database"`
 	Video    VideoConfig    `mapstructure:"video"`
 	Server   ServerConfig   `mapstructure:"server"`
+	SMS      SMSConfig      `mapstructure:"sms"`
 }
 
 type TelegramConfig struct {
@@ -34,6 +35,13 @@ type VideoConfig struct {
 type ServerConfig struct {
 	URL  string `mapstructure:"url"`
 	Port string `mapstructure:"port"`
+}
+
+type SMSConfig struct {
+	APIKey     string            `mapstructure:"apikey"`
+	FromNumber string            `mapstructure:"from_number"`
+	BaseURL    string            `mapstructure:"base_url"`
+	Patterns   map[string]string `mapstructure:"patterns"`
 }
 
 func Load() *Config {
