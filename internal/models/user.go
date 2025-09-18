@@ -7,17 +7,18 @@ import (
 )
 
 type User struct {
-	ID          uint           `gorm:"primarykey" json:"id"`
-	TelegramID  int64          `gorm:"uniqueIndex;not null" json:"telegram_id"`
-	FirstName   string         `gorm:"not null" json:"first_name"`
-	LastName    string         `gorm:"not null" json:"last_name"`
-	PhoneNumber string         `gorm:"not null" json:"phone_number"`
-	Job         string         `gorm:"not null" json:"job"`
-	Username    string         `json:"username"`
-	IsActive    bool           `gorm:"default:true" json:"is_active"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+	ID             uint           `gorm:"primarykey" json:"id"`
+	TelegramID     int64          `gorm:"uniqueIndex;not null" json:"telegram_id"`
+	FirstName      string         `gorm:"not null" json:"first_name"`
+	LastName       string         `gorm:"not null" json:"last_name"`
+	PhoneNumber    string         `gorm:"not null" json:"phone_number"`
+	Job            string         `gorm:"not null" json:"job"`
+	Username       string         `json:"username"`
+	SupportStaffID uint           `json:"support_staff_id"` // Fixed support staff for this user
+	IsActive       bool           `gorm:"default:true" json:"is_active"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	DeletedAt      gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }
 
 type UserRegistrationState struct {

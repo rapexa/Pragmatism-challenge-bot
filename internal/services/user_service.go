@@ -2,9 +2,11 @@ package services
 
 import (
 	"errors"
+	"math/rand"
 	"sync"
 	"telegram-bot/internal/database"
 	"telegram-bot/internal/models"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -13,12 +15,14 @@ type UserService struct {
 	db             *database.Database
 	registrations  map[int64]*models.UserRegistrationState
 	registrationMu sync.RWMutex
+	rand           *rand.Rand
 }
 
 func NewUserService(db *database.Database) *UserService {
 	return &UserService{
 		db:            db,
 		registrations: make(map[int64]*models.UserRegistrationState),
+		rand:          rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -86,14 +90,26 @@ func (s *UserService) CompleteRegistration(telegramID int64, phoneNumber, job, u
 		return errors.New("registration state not found")
 	}
 
+	// Get a random support staff for this user (will be fixed for this user)
+	var supportStaff []models.SupportStaff
+	result := s.db.DB.Where("is_active = ?", true).Find(&supportStaff)
+	if result.Error != nil || len(supportStaff) == 0 {
+		return errors.New("no active support staff available")
+	}
+
+	// Select support staff randomly for initial assignment (but will be fixed for this user)
+	supportIndex := s.rand.Intn(len(supportStaff))
+	selectedSupport := supportStaff[supportIndex]
+
 	user := &models.User{
-		TelegramID:  telegramID,
-		FirstName:   state.FirstName,
-		LastName:    state.LastName,
-		PhoneNumber: phoneNumber,
-		Job:         job,
-		Username:    username,
-		IsActive:    true,
+		TelegramID:     telegramID,
+		FirstName:      state.FirstName,
+		LastName:       state.LastName,
+		PhoneNumber:    phoneNumber,
+		Job:            job,
+		Username:       username,
+		SupportStaffID: selectedSupport.ID,
+		IsActive:       true,
 	}
 
 	err := s.CreateUser(user)
@@ -105,6 +121,25 @@ func (s *UserService) CompleteRegistration(telegramID int64, phoneNumber, job, u
 	delete(s.registrations, telegramID)
 
 	return nil
+}
+
+func (s *UserService) GetUserWithSupport(telegramID int64) (*models.User, *models.SupportStaff, error) {
+	var user models.User
+	err := s.db.DB.Where("telegram_id = ?", telegramID).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, nil
+		}
+		return nil, nil, err
+	}
+
+	var support models.SupportStaff
+	err = s.db.DB.First(&support, user.SupportStaffID).Error
+	if err != nil {
+		return &user, nil, err
+	}
+
+	return &user, &support, nil
 }
 
 func (s *UserService) CancelRegistration(telegramID int64) {

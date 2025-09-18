@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 	"telegram-bot/internal/config"
+	"telegram-bot/internal/models"
 	"telegram-bot/internal/services"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -36,7 +37,7 @@ func (h *BotHandler) handleMessage(message *tgbotapi.Message) {
 	telegramID := message.From.ID
 
 	// Check if user is already registered
-	user, err := h.userService.GetUser(telegramID)
+	user, support, err := h.userService.GetUserWithSupport(telegramID)
 	if err != nil {
 		log.Printf("Error checking user: %v", err)
 		h.sendMessage(telegramID, "خطایی رخ داده است. لطفاً دوباره تلاش کنید.")
@@ -45,7 +46,7 @@ func (h *BotHandler) handleMessage(message *tgbotapi.Message) {
 
 	// If user is registered and sends /start, send video
 	if user != nil && message.Command() == "start" {
-		h.sendVideoWithSupport(telegramID)
+		h.sendVideoWithSupport(telegramID, support)
 		return
 	}
 
@@ -177,18 +178,27 @@ func (h *BotHandler) handleJobInput(telegramID int64, job string) {
 
 	h.sendMessage(telegramID, "🎉 ثبت نام شما با موفقیت تکمیل شد!\n\nدر حال ارسال ویدیو...")
 
+	// Get user with support info for sending video
+	user, support, err := h.userService.GetUserWithSupport(telegramID)
+	if err != nil || support == nil {
+		log.Printf("Error getting user support info: %v", err)
+		h.sendMessage(telegramID, "خطایی در دریافت اطلاعات پشتیبانی رخ داده است.")
+		return
+	}
+
 	// Send video with support info
-	h.sendVideoWithSupport(telegramID)
+	h.sendVideoWithSupport(telegramID, support)
 }
 
-func (h *BotHandler) sendVideoWithSupport(telegramID int64) {
-	// Copy the specific message from the channel (without showing source)
+func (h *BotHandler) sendVideoWithSupport(telegramID int64, support *models.SupportStaff) {
+	// Copy the specific message from the channel with custom caption
 	copyConfig := tgbotapi.CopyMessageConfig{
 		BaseChat: tgbotapi.BaseChat{
 			ChatID: telegramID,
 		},
 		FromChatID: h.config.Telegram.ChannelID,
 		MessageID:  2, // Post number 2 from the channel
+		Caption:    "ثبت نام شما با موفقیت انجام شد",
 	}
 
 	_, err := h.bot.Send(copyConfig)
@@ -198,10 +208,9 @@ func (h *BotHandler) sendVideoWithSupport(telegramID int64) {
 		return
 	}
 
-	// Get random support staff
-	support := h.supportService.GetRandomSupport()
+	// Check if support staff is available
 	if support == nil {
-		log.Println("No support staff defined in database")
+		log.Println("No support staff assigned to user")
 		h.sendMessage(telegramID, "ویدیو ارسال شد اما اطلاعات پشتیبانی در دسترس نیست.")
 		return
 	}
@@ -215,10 +224,14 @@ func (h *BotHandler) sendVideoWithSupport(telegramID int64) {
 
 	h.sendMessage(telegramID, supportMessage)
 
-	// Send support photo if available
+	// Send support photo with complete info as caption
 	if support.PhotoURL != "" {
 		photo := tgbotapi.NewPhoto(telegramID, tgbotapi.FileURL(support.PhotoURL))
-		photo.Caption = fmt.Sprintf("📸 عکس پشتیبان شما: %s", support.Name)
+		photo.Caption = fmt.Sprintf("👤 پشتیبان شما: %s\n📞 آیدی پشتیبان: %s\n🔗 لینک گروه: %s",
+			support.Name,
+			support.Username,
+			h.config.Telegram.GroupLink,
+		)
 		h.bot.Send(photo)
 	}
 }
