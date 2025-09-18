@@ -273,7 +273,7 @@ func (h *BotHandler) sendWelcomeBackMessage(telegramID int64, user *models.User,
 }
 
 func (h *BotHandler) sendVideoWithSupport(telegramID int64, support *models.SupportStaff) {
-	h.sendVideoWithSupportAndCaption(telegramID, support, "ثبت نام شما با موفقیت انجام شد")
+	h.sendVideoWithSupportAndCaption(telegramID, support, "ویدیو آموزشی ربات چالش عملگرایی")
 }
 
 func (h *BotHandler) sendVideoWithSupportAndCaption(telegramID int64, support *models.SupportStaff, caption string) {
