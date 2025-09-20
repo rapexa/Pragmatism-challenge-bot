@@ -291,11 +291,17 @@ func (h *BotHandler) sendWelcomeBackMessage(telegramID int64, user *models.User,
 	h.sendMessage(telegramID, welcomeBackMessage)
 
 	// Send video with different caption for returning users
-	h.sendVideoWithSupportAndCaption(telegramID, support, "ویدیو آموزشی ربات چالش عملگرایی")
+	h.sendVideoWithSupportAndCaption(telegramID, support, `💎ورود شما گلادیاتور قدرتمند رو به چالش 5روز عملگرایی تبریک میگم💎
+
+لطفا با دقت ویدیو آموزشی بالا رو ببینید😍
+تا بدونید در طی این 5روزه قرار چه اتفاق بزرگی در کنارهم رقم بزنیم✅`)
 }
 
 func (h *BotHandler) sendVideoWithSupport(telegramID int64, support *models.SupportStaff) {
-	h.sendVideoWithSupportAndCaption(telegramID, support, "ویدیو آموزشی ربات چالش عملگرایی")
+	h.sendVideoWithSupportAndCaption(telegramID, support, `💎ورود شما گلادیاتور قدرتمند رو به چالش 5روز عملگرایی تبریک میگم💎
+
+لطفا با دقت ویدیو آموزشی بالا رو ببینید😍
+تا بدونید در طی این 5روزه قرار چه اتفاق بزرگی در کنارهم رقم بزنیم✅`)
 }
 
 func (h *BotHandler) sendVideoWithSupportAndCaption(telegramID int64, support *models.SupportStaff, caption string) {
