@@ -341,36 +341,46 @@ func (h *BotHandler) sendVideoWithSupportAndCaption(telegramID int64, support *m
 			photo = tgbotapi.NewPhoto(telegramID, tgbotapi.FileURL(support.PhotoURL))
 		}
 
-		photo.Caption = fmt.Sprintf(`👨‍💼 پشتیبان اختصاصی شما:
+		photo.Caption = fmt.Sprintf(`👩‍💼پشتیبان اختصاصی شما:
 
-👤 نام: %s
-📞 آیدی تلگرام: %s
+👩‍💻 نام: %s
+📞آیدی تلگرام: %s
 
-🔗 لینک گروه VIP:
-%s
-
-💬 برای ارتباط با پشتیبان، روی آیدی بالا کلیک کنید`,
+💬 برای ارتباط با پشتیبانتون، روی آیدی بالا کلیک کنید`,
 			support.Name,
 			support.Username,
-			h.config.Telegram.GroupLink,
 		)
+
+		// Add inline keyboard with glass button for VIP group
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonURL("🔗 لینک گروه VIP چالش", h.config.Telegram.GroupLink),
+			),
+		)
+		photo.ReplyMarkup = keyboard
+
 		h.bot.Send(photo)
 	} else {
 		// If no photo available, send text message
-		supportMessage := fmt.Sprintf(`👨‍💼 پشتیبان اختصاصی شما:
+		supportMessage := fmt.Sprintf(`👩‍💼پشتیبان اختصاصی شما:
 
-👤 نام: %s
-📞 آیدی تلگرام: %s
+👩‍💻 نام: %s
+📞آیدی تلگرام: %s
 
-🔗 لینک گروه VIP:
-%s
-
-💬 برای ارتباط با پشتیبان، روی آیدی بالا کلیک کنید`,
+💬 برای ارتباط با پشتیبانتون، روی آیدی بالا کلیک کنید`,
 			support.Name,
 			support.Username,
-			h.config.Telegram.GroupLink,
 		)
-		h.sendMessage(telegramID, supportMessage)
+
+		// Create message with inline keyboard
+		msg := tgbotapi.NewMessage(telegramID, supportMessage)
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonURL("🔗 لینک گروه VIP چالش", h.config.Telegram.GroupLink),
+			),
+		)
+		msg.ReplyMarkup = keyboard
+		h.bot.Send(msg)
 	}
 }
 
