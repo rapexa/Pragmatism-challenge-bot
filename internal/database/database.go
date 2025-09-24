@@ -29,7 +29,7 @@ func New(cfg *config.DatabaseConfig) *Database {
 	}
 
 	// Auto migrate models
-	err = db.AutoMigrate(&models.User{}, &models.SupportStaff{}, &models.Admin{})
+	err = db.AutoMigrate(&models.User{}, &models.SupportStaff{}, &models.Admin{}, &models.BroadcastMessage{}, &models.BroadcastDelivery{})
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}

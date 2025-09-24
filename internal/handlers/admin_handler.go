@@ -7,6 +7,7 @@ import (
 	"strings"
 	"telegram-bot/internal/config"
 	"telegram-bot/internal/keyboards"
+	"telegram-bot/internal/models"
 	"telegram-bot/internal/services"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -17,18 +18,22 @@ type AdminHandler struct {
 	adminPanelService *services.AdminPanelService
 	configService     *services.ConfigService
 	fileService       *services.FileService
+	broadcastService  *services.BroadcastService
 	config            *config.Config
-	adminStates       map[int64]string // Track admin states for multi-step operations
+	adminStates       map[int64]string                   // Track admin states for multi-step operations
+	broadcastPreviews map[int64]*models.BroadcastPreview // Track broadcast previews
 }
 
-func NewAdminHandler(bot *tgbotapi.BotAPI, adminPanelService *services.AdminPanelService, configService *services.ConfigService, fileService *services.FileService, cfg *config.Config) *AdminHandler {
+func NewAdminHandler(bot *tgbotapi.BotAPI, adminPanelService *services.AdminPanelService, configService *services.ConfigService, fileService *services.FileService, broadcastService *services.BroadcastService, cfg *config.Config) *AdminHandler {
 	return &AdminHandler{
 		bot:               bot,
 		adminPanelService: adminPanelService,
 		configService:     configService,
 		fileService:       fileService,
+		broadcastService:  broadcastService,
 		config:            cfg,
 		adminStates:       make(map[int64]string),
+		broadcastPreviews: make(map[int64]*models.BroadcastPreview),
 	}
 }
 
@@ -91,6 +96,37 @@ func (h *AdminHandler) handleAdminMessage(message *tgbotapi.Message, telegramID 
 		delete(h.adminStates, telegramID)
 		h.sendGroupSettings(telegramID)
 		return
+	case "📢 ارسال پیام همگانی":
+		delete(h.adminStates, telegramID)
+		h.sendBroadcastMainMenu(telegramID)
+		return
+	case "📝 ارسال متن":
+		h.startBroadcastText(telegramID)
+		return
+	case "📷 ارسال عکس":
+		h.startBroadcastPhoto(telegramID)
+		return
+	case "🎥 ارسال ویدیو":
+		h.startBroadcastVideo(telegramID)
+		return
+	case "📄 ارسال فایل":
+		h.startBroadcastDocument(telegramID)
+		return
+	case "🎵 ارسال صدا":
+		h.startBroadcastAudio(telegramID)
+		return
+	case "🎤 ارسال ویس":
+		h.startBroadcastVoice(telegramID)
+		return
+	case "😀 ارسال استیکر":
+		h.startBroadcastSticker(telegramID)
+		return
+	case "🎬 ارسال انیمیشن":
+		h.startBroadcastAnimation(telegramID)
+		return
+	case "📋 تاریخچه پیام‌ها":
+		h.showBroadcastHistory(telegramID)
+		return
 	case "📤 آپلود عکس جدید":
 		h.handlePhotoUploadRequest(telegramID)
 		return
@@ -101,6 +137,11 @@ func (h *AdminHandler) handleAdminMessage(message *tgbotapi.Message, telegramID 
 
 	// Handle states for multi-step operations
 	if state, exists := h.adminStates[telegramID]; exists {
+		// Check if it's a broadcast state
+		if strings.HasPrefix(state, "broadcast_") {
+			h.handleBroadcastContent(message, telegramID, state)
+			return
+		}
 		h.handleAdminState(message, telegramID, state)
 		return
 	}
@@ -392,7 +433,11 @@ func (h *AdminHandler) handleAdminState(message *tgbotapi.Message, telegramID in
 func (h *AdminHandler) handleAdminCallback(callback *tgbotapi.CallbackQuery, telegramID int64) {
 	data := callback.Data
 
-	if strings.HasPrefix(data, "edit_name_") {
+	if data == "confirm_broadcast" {
+		h.confirmBroadcast(telegramID)
+	} else if data == "cancel_broadcast" {
+		h.cancelBroadcast(telegramID)
+	} else if strings.HasPrefix(data, "edit_name_") {
 		h.handleEditSupportName(callback, telegramID)
 	} else if strings.HasPrefix(data, "edit_username_") {
 		h.handleEditSupportUsername(callback, telegramID)
@@ -571,4 +616,285 @@ func (h *AdminHandler) sendMessage(chatID int64, text string) {
 	if err != nil {
 		log.Printf("Error sending admin message: %v", err)
 	}
+}
+
+// Broadcast handling methods
+
+func (h *AdminHandler) sendBroadcastMainMenu(telegramID int64) {
+	msg := tgbotapi.NewMessage(telegramID, "📢 سیستم ارسال پیام همگانی\n\nیکی از گزینه‌های زیر را انتخاب کنید:")
+	msg.ReplyMarkup = keyboards.BroadcastMainKeyboard()
+	h.bot.Send(msg)
+}
+
+func (h *AdminHandler) startBroadcastText(telegramID int64) {
+	h.adminStates[telegramID] = "broadcast_text"
+	h.broadcastPreviews[telegramID] = &models.BroadcastPreview{
+		ContentType: "text",
+	}
+
+	msg := tgbotapi.NewMessage(telegramID, "📝 متن پیام همگانی را وارد کنید:\n\n💡 برای لغو، روی ❌ لغو عملیات کلیک کنید")
+	msg.ReplyMarkup = keyboards.CancelOperationKeyboard()
+	h.bot.Send(msg)
+}
+
+func (h *AdminHandler) startBroadcastPhoto(telegramID int64) {
+	h.adminStates[telegramID] = "broadcast_photo"
+	h.broadcastPreviews[telegramID] = &models.BroadcastPreview{
+		ContentType: "photo",
+	}
+
+	msg := tgbotapi.NewMessage(telegramID, "📷 عکس پیام همگانی را ارسال کنید:\n\n💡 برای لغو، روی ❌ لغو عملیات کلیک کنید")
+	msg.ReplyMarkup = keyboards.CancelOperationKeyboard()
+	h.bot.Send(msg)
+}
+
+func (h *AdminHandler) startBroadcastVideo(telegramID int64) {
+	h.adminStates[telegramID] = "broadcast_video"
+	h.broadcastPreviews[telegramID] = &models.BroadcastPreview{
+		ContentType: "video",
+	}
+
+	msg := tgbotapi.NewMessage(telegramID, "🎥 ویدیو پیام همگانی را ارسال کنید:\n\n💡 برای لغو، روی ❌ لغو عملیات کلیک کنید")
+	msg.ReplyMarkup = keyboards.CancelOperationKeyboard()
+	h.bot.Send(msg)
+}
+
+func (h *AdminHandler) startBroadcastDocument(telegramID int64) {
+	h.adminStates[telegramID] = "broadcast_document"
+	h.broadcastPreviews[telegramID] = &models.BroadcastPreview{
+		ContentType: "document",
+	}
+
+	msg := tgbotapi.NewMessage(telegramID, "📄 فایل پیام همگانی را ارسال کنید:\n\n💡 برای لغو، روی ❌ لغو عملیات کلیک کنید")
+	msg.ReplyMarkup = keyboards.CancelOperationKeyboard()
+	h.bot.Send(msg)
+}
+
+func (h *AdminHandler) startBroadcastAudio(telegramID int64) {
+	h.adminStates[telegramID] = "broadcast_audio"
+	h.broadcastPreviews[telegramID] = &models.BroadcastPreview{
+		ContentType: "audio",
+	}
+
+	msg := tgbotapi.NewMessage(telegramID, "🎵 فایل صوتی پیام همگانی را ارسال کنید:\n\n💡 برای لغو، روی ❌ لغو عملیات کلیک کنید")
+	msg.ReplyMarkup = keyboards.CancelOperationKeyboard()
+	h.bot.Send(msg)
+}
+
+func (h *AdminHandler) startBroadcastVoice(telegramID int64) {
+	h.adminStates[telegramID] = "broadcast_voice"
+	h.broadcastPreviews[telegramID] = &models.BroadcastPreview{
+		ContentType: "voice",
+	}
+
+	msg := tgbotapi.NewMessage(telegramID, "🎤 پیام صوتی همگانی را ارسال کنید:\n\n💡 برای لغو، روی ❌ لغو عملیات کلیک کنید")
+	msg.ReplyMarkup = keyboards.CancelOperationKeyboard()
+	h.bot.Send(msg)
+}
+
+func (h *AdminHandler) startBroadcastSticker(telegramID int64) {
+	h.adminStates[telegramID] = "broadcast_sticker"
+	h.broadcastPreviews[telegramID] = &models.BroadcastPreview{
+		ContentType: "sticker",
+	}
+
+	msg := tgbotapi.NewMessage(telegramID, "😀 استیکر پیام همگانی را ارسال کنید:\n\n💡 برای لغو، روی ❌ لغو عملیات کلیک کنید")
+	msg.ReplyMarkup = keyboards.CancelOperationKeyboard()
+	h.bot.Send(msg)
+}
+
+func (h *AdminHandler) startBroadcastAnimation(telegramID int64) {
+	h.adminStates[telegramID] = "broadcast_animation"
+	h.broadcastPreviews[telegramID] = &models.BroadcastPreview{
+		ContentType: "animation",
+	}
+
+	msg := tgbotapi.NewMessage(telegramID, "🎬 انیمیشن (GIF) پیام همگانی را ارسال کنید:\n\n💡 برای لغو، روی ❌ لغو عملیات کلیک کنید")
+	msg.ReplyMarkup = keyboards.CancelOperationKeyboard()
+	h.bot.Send(msg)
+}
+
+func (h *AdminHandler) showBroadcastHistory(telegramID int64) {
+	broadcasts, err := h.broadcastService.GetBroadcastHistory(10, 0)
+	if err != nil {
+		log.Printf("Error getting broadcast history: %v", err)
+		h.sendMessage(telegramID, "خطا در دریافت تاریخچه پیام‌ها")
+		return
+	}
+
+	if len(broadcasts) == 0 {
+		h.sendMessage(telegramID, "📋 هیچ پیام همگانی ارسال نشده است")
+		return
+	}
+
+	message := "📋 تاریخچه پیام‌های همگانی:\n\n"
+	for i, broadcast := range broadcasts {
+		status := "⏳ در انتظار"
+		if broadcast.Status == "sent" {
+			status = "✅ ارسال شده"
+		} else if broadcast.Status == "sending" {
+			status = "📤 در حال ارسال"
+		} else if broadcast.Status == "failed" {
+			status = "❌ ناموفق"
+		}
+
+		message += fmt.Sprintf("%d. %s - %s\n", i+1, broadcast.ContentType, status)
+		message += fmt.Sprintf("   📅 %s\n", broadcast.CreatedAt.Format("2006-01-02 15:04"))
+		message += fmt.Sprintf("   📊 ارسال: %d | ناموفق: %d\n\n", broadcast.SentCount, broadcast.FailedCount)
+	}
+
+	h.sendMessage(telegramID, message)
+}
+
+func (h *AdminHandler) handleBroadcastContent(message *tgbotapi.Message, telegramID int64, state string) {
+	preview, exists := h.broadcastPreviews[telegramID]
+	if !exists {
+		h.sendMessage(telegramID, "خطا در پردازش پیام. لطفاً دوباره شروع کنید.")
+		return
+	}
+
+	switch state {
+	case "broadcast_text":
+		preview.Text = message.Text
+		h.showBroadcastPreview(telegramID, preview)
+
+	case "broadcast_photo":
+		if message.Photo != nil {
+			largestPhoto := message.Photo[len(message.Photo)-1]
+			preview.FileID = largestPhoto.FileID
+			preview.HasFile = true
+		}
+		h.adminStates[telegramID] = "broadcast_photo_caption"
+		h.sendMessage(telegramID, "📝 کپشن عکس را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ❌ لغو عملیات کلیک کنید")
+
+	case "broadcast_video":
+		if message.Video != nil {
+			preview.FileID = message.Video.FileID
+			preview.HasFile = true
+		}
+		h.adminStates[telegramID] = "broadcast_video_caption"
+		h.sendMessage(telegramID, "📝 کپشن ویدیو را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ❌ لغو عملیات کلیک کنید")
+
+	case "broadcast_document":
+		if message.Document != nil {
+			preview.FileID = message.Document.FileID
+			preview.HasFile = true
+		}
+		h.adminStates[telegramID] = "broadcast_document_caption"
+		h.sendMessage(telegramID, "📝 کپشن فایل را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ❌ لغو عملیات کلیک کنید")
+
+	case "broadcast_audio":
+		if message.Audio != nil {
+			preview.FileID = message.Audio.FileID
+			preview.HasFile = true
+		}
+		h.adminStates[telegramID] = "broadcast_audio_caption"
+		h.sendMessage(telegramID, "📝 کپشن فایل صوتی را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ❌ لغو عملیات کلیک کنید")
+
+	case "broadcast_voice":
+		if message.Voice != nil {
+			preview.FileID = message.Voice.FileID
+			preview.HasFile = true
+		}
+		h.showBroadcastPreview(telegramID, preview)
+
+	case "broadcast_sticker":
+		if message.Sticker != nil {
+			preview.FileID = message.Sticker.FileID
+			preview.HasFile = true
+		}
+		h.showBroadcastPreview(telegramID, preview)
+
+	case "broadcast_animation":
+		if message.Animation != nil {
+			preview.FileID = message.Animation.FileID
+			preview.HasFile = true
+		}
+		h.adminStates[telegramID] = "broadcast_animation_caption"
+		h.sendMessage(telegramID, "📝 کپشن انیمیشن را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ❌ لغو عملیات کلیک کنید")
+
+	case "broadcast_photo_caption", "broadcast_video_caption", "broadcast_document_caption", "broadcast_audio_caption", "broadcast_animation_caption":
+		preview.Text = message.Text
+		h.showBroadcastPreview(telegramID, preview)
+	}
+}
+
+func (h *AdminHandler) showBroadcastPreview(telegramID int64, preview *models.BroadcastPreview) {
+	// Get user count
+	userCount, err := h.broadcastService.GetUserCount()
+	if err != nil {
+		log.Printf("Error getting user count: %v", err)
+		userCount = 0
+	}
+
+	message := fmt.Sprintf("📢 پیش‌نمایش پیام همگانی\n\n")
+	message += fmt.Sprintf("📊 تعداد کاربران: %d\n", userCount)
+	message += fmt.Sprintf("📝 نوع محتوا: %s\n\n", preview.ContentType)
+
+	if preview.Text != "" {
+		message += fmt.Sprintf("📄 متن:\n%s\n\n", preview.Text)
+	}
+
+	if preview.HasFile {
+		message += "📎 فایل ضمیمه شده است\n\n"
+	}
+
+	message += "⚠️ آیا می‌خواهید این پیام به همه کاربران ارسال شود؟"
+
+	msg := tgbotapi.NewMessage(telegramID, message)
+	msg.ReplyMarkup = keyboards.BroadcastConfirmationKeyboard()
+	h.bot.Send(msg)
+
+	// Store preview for confirmation
+	h.broadcastPreviews[telegramID] = preview
+}
+
+func (h *AdminHandler) confirmBroadcast(telegramID int64) {
+	preview, exists := h.broadcastPreviews[telegramID]
+	if !exists {
+		h.sendMessage(telegramID, "خطا در پردازش پیام. لطفاً دوباره شروع کنید.")
+		return
+	}
+
+	// Create broadcast message
+	broadcast, err := h.broadcastService.CreateBroadcast(
+		telegramID,
+		preview.ContentType,
+		preview.Text,
+		preview.FileID,
+		preview.FileURL,
+	)
+	if err != nil {
+		log.Printf("Error creating broadcast: %v", err)
+		h.sendMessage(telegramID, "خطا در ایجاد پیام همگانی")
+		return
+	}
+
+	// Send broadcast
+	h.sendMessage(telegramID, "📤 در حال ارسال پیام همگانی...")
+
+	go func() {
+		err := h.broadcastService.SendBroadcast(broadcast.ID)
+		if err != nil {
+			log.Printf("Error sending broadcast: %v", err)
+			h.sendMessage(telegramID, "❌ خطا در ارسال پیام همگانی")
+		} else {
+			// Get final stats
+			stats, _ := h.broadcastService.GetBroadcastStats(broadcast.ID)
+			message := fmt.Sprintf("✅ پیام همگانی با موفقیت ارسال شد!\n\n📊 آمار:\n✅ ارسال شده: %d\n❌ ناموفق: %d", stats["sent"], stats["failed"])
+			h.sendMessage(telegramID, message)
+		}
+	}()
+
+	// Clean up
+	delete(h.broadcastPreviews, telegramID)
+	delete(h.adminStates, telegramID)
+	h.sendBroadcastMainMenu(telegramID)
+}
+
+func (h *AdminHandler) cancelBroadcast(telegramID int64) {
+	delete(h.broadcastPreviews, telegramID)
+	delete(h.adminStates, telegramID)
+	h.sendMessage(telegramID, "❌ ارسال پیام همگانی لغو شد")
+	h.sendBroadcastMainMenu(telegramID)
 }

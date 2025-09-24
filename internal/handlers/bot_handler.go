@@ -14,28 +14,32 @@ import (
 )
 
 type BotHandler struct {
-	bot               *tgbotapi.BotAPI
-	userService       *services.UserService
-	supportService    *services.SupportService
-	adminPanelService *services.AdminPanelService
-	fileService       *services.FileService
-	smsService        *services.SMSService
-	adminHandler      *AdminHandler
-	config            *config.Config
+	bot                   *tgbotapi.BotAPI
+	userService           *services.UserService
+	supportService        *services.SupportService
+	adminPanelService     *services.AdminPanelService
+	fileService           *services.FileService
+	smsService            *services.SMSService
+	broadcastService      *services.BroadcastService
+	delayedMessageService *services.DelayedMessageService
+	adminHandler          *AdminHandler
+	config                *config.Config
 }
 
-func NewBotHandler(bot *tgbotapi.BotAPI, userService *services.UserService, supportService *services.SupportService, adminPanelService *services.AdminPanelService, configService *services.ConfigService, fileService *services.FileService, smsService *services.SMSService, cfg *config.Config) *BotHandler {
-	adminHandler := NewAdminHandler(bot, adminPanelService, configService, fileService, cfg)
+func NewBotHandler(bot *tgbotapi.BotAPI, userService *services.UserService, supportService *services.SupportService, adminPanelService *services.AdminPanelService, configService *services.ConfigService, fileService *services.FileService, smsService *services.SMSService, broadcastService *services.BroadcastService, delayedMessageService *services.DelayedMessageService, cfg *config.Config) *BotHandler {
+	adminHandler := NewAdminHandler(bot, adminPanelService, configService, fileService, broadcastService, cfg)
 
 	return &BotHandler{
-		bot:               bot,
-		userService:       userService,
-		supportService:    supportService,
-		adminPanelService: adminPanelService,
-		fileService:       fileService,
-		smsService:        smsService,
-		adminHandler:      adminHandler,
-		config:            cfg,
+		bot:                   bot,
+		userService:           userService,
+		supportService:        supportService,
+		adminPanelService:     adminPanelService,
+		fileService:           fileService,
+		smsService:            smsService,
+		broadcastService:      broadcastService,
+		delayedMessageService: delayedMessageService,
+		adminHandler:          adminHandler,
+		config:                cfg,
 	}
 }
 
@@ -295,6 +299,9 @@ func (h *BotHandler) sendWelcomeBackMessage(telegramID int64, user *models.User,
 
 لطفا با دقت ویدیو آموزشی بالا رو ببینید😍
 تا بدونید در طی این 5روزه قرار چه اتفاق بزرگی در کنارهم رقم بزنیم✅`)
+
+	// Schedule delayed follow-up message after 1 minute for returning users too
+	h.delayedMessageService.ScheduleGroupLinkFollowUp(telegramID)
 }
 
 func (h *BotHandler) sendVideoWithSupport(telegramID int64, support *models.SupportStaff) {
@@ -373,6 +380,9 @@ func (h *BotHandler) sendVideoWithSupportAndCaption(telegramID int64, support *m
 		photo.ReplyMarkup = keyboard
 
 		h.bot.Send(photo)
+
+		// Schedule delayed follow-up message after 1 minute
+		h.delayedMessageService.ScheduleGroupLinkFollowUp(telegramID)
 	} else {
 		// If no photo available, send text message
 		supportMessage := fmt.Sprintf(`گلادیاتورقدرتمند👑
@@ -401,6 +411,9 @@ func (h *BotHandler) sendVideoWithSupportAndCaption(telegramID int64, support *m
 		)
 		msg.ReplyMarkup = keyboard
 		h.bot.Send(msg)
+
+		// Schedule delayed follow-up message after 1 minute
+		h.delayedMessageService.ScheduleGroupLinkFollowUp(telegramID)
 	}
 }
 
