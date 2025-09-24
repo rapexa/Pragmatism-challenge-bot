@@ -48,7 +48,23 @@ func (h *AdminHandler) HandleAdminUpdate(update tgbotapi.Update, telegramID int6
 func (h *AdminHandler) handleAdminMessage(message *tgbotapi.Message, telegramID int64) {
 	text := message.Text
 
-	// Handle photo uploads
+	// Handle states for multi-step operations first (including broadcast states)
+	if state, exists := h.adminStates[telegramID]; exists {
+		// Check if it's a broadcast state
+		if strings.HasPrefix(state, "broadcast_") {
+			h.handleBroadcastContent(message, telegramID, state)
+			return
+		}
+		// Check if it's a photo upload state for support staff editing
+		if strings.HasPrefix(state, "edit_support_photo_upload:") {
+			h.handlePhotoUpload(message, telegramID)
+			return
+		}
+		h.handleAdminState(message, telegramID, state)
+		return
+	}
+
+	// Handle photo uploads (only if not in any state)
 	if message.Photo != nil {
 		h.handlePhotoUpload(message, telegramID)
 		return
@@ -132,17 +148,6 @@ func (h *AdminHandler) handleAdminMessage(message *tgbotapi.Message, telegramID 
 		return
 	case "🔗 وارد کردن لینک":
 		h.handlePhotoURLRequest(telegramID)
-		return
-	}
-
-	// Handle states for multi-step operations
-	if state, exists := h.adminStates[telegramID]; exists {
-		// Check if it's a broadcast state
-		if strings.HasPrefix(state, "broadcast_") {
-			h.handleBroadcastContent(message, telegramID, state)
-			return
-		}
-		h.handleAdminState(message, telegramID, state)
 		return
 	}
 
@@ -765,7 +770,9 @@ func (h *AdminHandler) handleBroadcastContent(message *tgbotapi.Message, telegra
 			preview.HasFile = true
 		}
 		h.adminStates[telegramID] = "broadcast_photo_caption"
-		h.sendMessage(telegramID, "📝 کپشن عکس را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ❌ لغو عملیات کلیک کنید")
+		msg := tgbotapi.NewMessage(telegramID, "📝 کپشن عکس را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ⏭ رد کردن کپشن کلیک کنید")
+		msg.ReplyMarkup = keyboards.SkipCaptionKeyboard()
+		h.bot.Send(msg)
 
 	case "broadcast_video":
 		if message.Video != nil {
@@ -773,7 +780,9 @@ func (h *AdminHandler) handleBroadcastContent(message *tgbotapi.Message, telegra
 			preview.HasFile = true
 		}
 		h.adminStates[telegramID] = "broadcast_video_caption"
-		h.sendMessage(telegramID, "📝 کپشن ویدیو را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ❌ لغو عملیات کلیک کنید")
+		msg := tgbotapi.NewMessage(telegramID, "📝 کپشن ویدیو را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ⏭ رد کردن کپشن کلیک کنید")
+		msg.ReplyMarkup = keyboards.SkipCaptionKeyboard()
+		h.bot.Send(msg)
 
 	case "broadcast_document":
 		if message.Document != nil {
@@ -781,7 +790,9 @@ func (h *AdminHandler) handleBroadcastContent(message *tgbotapi.Message, telegra
 			preview.HasFile = true
 		}
 		h.adminStates[telegramID] = "broadcast_document_caption"
-		h.sendMessage(telegramID, "📝 کپشن فایل را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ❌ لغو عملیات کلیک کنید")
+		msg := tgbotapi.NewMessage(telegramID, "📝 کپشن فایل را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ⏭ رد کردن کپشن کلیک کنید")
+		msg.ReplyMarkup = keyboards.SkipCaptionKeyboard()
+		h.bot.Send(msg)
 
 	case "broadcast_audio":
 		if message.Audio != nil {
@@ -789,7 +800,9 @@ func (h *AdminHandler) handleBroadcastContent(message *tgbotapi.Message, telegra
 			preview.HasFile = true
 		}
 		h.adminStates[telegramID] = "broadcast_audio_caption"
-		h.sendMessage(telegramID, "📝 کپشن فایل صوتی را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ❌ لغو عملیات کلیک کنید")
+		msg := tgbotapi.NewMessage(telegramID, "📝 کپشن فایل صوتی را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ⏭ رد کردن کپشن کلیک کنید")
+		msg.ReplyMarkup = keyboards.SkipCaptionKeyboard()
+		h.bot.Send(msg)
 
 	case "broadcast_voice":
 		if message.Voice != nil {
@@ -811,10 +824,25 @@ func (h *AdminHandler) handleBroadcastContent(message *tgbotapi.Message, telegra
 			preview.HasFile = true
 		}
 		h.adminStates[telegramID] = "broadcast_animation_caption"
-		h.sendMessage(telegramID, "📝 کپشن انیمیشن را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ❌ لغو عملیات کلیک کنید")
+		msg := tgbotapi.NewMessage(telegramID, "📝 کپشن انیمیشن را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ⏭ رد کردن کپشن کلیک کنید")
+		msg.ReplyMarkup = keyboards.SkipCaptionKeyboard()
+		h.bot.Send(msg)
 
 	case "broadcast_photo_caption", "broadcast_video_caption", "broadcast_document_caption", "broadcast_audio_caption", "broadcast_animation_caption":
-		preview.Text = message.Text
+		// Check if user wants to skip caption or cancel operation
+		if message.Text == "❌ لغو عملیات" {
+			preview.Text = "" // Clear any existing text
+		} else if message.Text == "⏭ رد کردن کپشن" {
+			preview.Text = "" // Skip caption
+		} else {
+			// Trim whitespace and check if text is empty
+			trimmedText := strings.TrimSpace(message.Text)
+			if trimmedText == "" {
+				preview.Text = "" // No caption
+			} else {
+				preview.Text = trimmedText
+			}
+		}
 		h.showBroadcastPreview(telegramID, preview)
 	}
 }
@@ -831,12 +859,18 @@ func (h *AdminHandler) showBroadcastPreview(telegramID int64, preview *models.Br
 	message += fmt.Sprintf("📊 تعداد کاربران: %d\n", userCount)
 	message += fmt.Sprintf("📝 نوع محتوا: %s\n\n", preview.ContentType)
 
-	if preview.Text != "" {
-		message += fmt.Sprintf("📄 متن:\n%s\n\n", preview.Text)
+	if preview.HasFile {
+		message += "📎 فایل ضمیمه شده است"
+		if preview.Text != "" {
+			message += "\n📄 کپشن:\n" + preview.Text
+		} else {
+			message += " (بدون کپشن)"
+		}
+		message += "\n\n"
 	}
 
-	if preview.HasFile {
-		message += "📎 فایل ضمیمه شده است\n\n"
+	if preview.Text != "" && !preview.HasFile {
+		message += fmt.Sprintf("📄 متن:\n%s\n\n", preview.Text)
 	}
 
 	message += "⚠️ آیا می‌خواهید این پیام به همه کاربران ارسال شود؟"
@@ -897,4 +931,23 @@ func (h *AdminHandler) cancelBroadcast(telegramID int64) {
 	delete(h.adminStates, telegramID)
 	h.sendMessage(telegramID, "❌ ارسال پیام همگانی لغو شد")
 	h.sendBroadcastMainMenu(telegramID)
+}
+
+// Helper methods for testing and external access
+func (h *AdminHandler) StartBroadcastPhoto(telegramID int64) {
+	h.startBroadcastPhoto(telegramID)
+}
+
+func (h *AdminHandler) GetAdminState(telegramID int64) string {
+	if state, exists := h.adminStates[telegramID]; exists {
+		return state
+	}
+	return ""
+}
+
+func (h *AdminHandler) GetBroadcastPreview(telegramID int64) *models.BroadcastPreview {
+	if preview, exists := h.broadcastPreviews[telegramID]; exists {
+		return preview
+	}
+	return nil
 }

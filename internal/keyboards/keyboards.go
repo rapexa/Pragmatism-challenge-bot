@@ -64,6 +64,18 @@ func CancelOperationKeyboard() tgbotapi.ReplyKeyboardMarkup {
 	return keyboard
 }
 
+// SkipCaptionKeyboard returns a keyboard for skipping captions
+func SkipCaptionKeyboard() tgbotapi.ReplyKeyboardMarkup {
+	keyboard := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("⏭ رد کردن کپشن"),
+			tgbotapi.NewKeyboardButton("❌ لغو عملیات"),
+		),
+	)
+	keyboard.ResizeKeyboard = true
+	return keyboard
+}
+
 // User keyboards
 
 // PhoneRequestKeyboard returns keyboard for requesting phone number
