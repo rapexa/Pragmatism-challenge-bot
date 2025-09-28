@@ -215,26 +215,50 @@ func (s *BroadcastService) sendPhotoMessage(userID int64, caption, fileID, fileU
 
 // sendVideoMessage sends a video with optional caption
 func (s *BroadcastService) sendVideoMessage(userID int64, caption, fileID, fileURL string) error {
-	var video tgbotapi.VideoConfig
-
 	if fileID != "" {
-		video = tgbotapi.NewVideo(userID, tgbotapi.FileID(fileID))
+		log.Printf("Sending video to user %d: FileID=%s, Caption=%s", userID, fileID, caption)
+
+		// Try to send as regular video first
+		video := tgbotapi.NewVideo(userID, tgbotapi.FileID(fileID))
+		if caption != "" {
+			video.Caption = caption
+		}
+
+		_, err := s.bot.Send(video)
+		if err != nil {
+			log.Printf("Failed to send video as regular video, trying as document: %v", err)
+			// If regular video fails, try as document
+			document := tgbotapi.NewDocument(userID, tgbotapi.FileID(fileID))
+			if caption != "" {
+				document.Caption = caption
+			}
+			_, err = s.bot.Send(document)
+			if err != nil {
+				log.Printf("Failed to send video as document: %v", err)
+			}
+		}
+		return err
 	} else if fileURL != "" {
+		log.Printf("Sending video to user %d: FileURL=%s, Caption=%s", userID, fileURL, caption)
+
 		if strings.HasPrefix(fileURL, "uploads/") || (!strings.HasPrefix(fileURL, "http")) {
-			video = tgbotapi.NewVideo(userID, tgbotapi.FilePath(fileURL))
+			video := tgbotapi.NewVideo(userID, tgbotapi.FilePath(fileURL))
+			if caption != "" {
+				video.Caption = caption
+			}
+			_, err := s.bot.Send(video)
+			return err
 		} else {
-			video = tgbotapi.NewVideo(userID, tgbotapi.FileURL(fileURL))
+			video := tgbotapi.NewVideo(userID, tgbotapi.FileURL(fileURL))
+			if caption != "" {
+				video.Caption = caption
+			}
+			_, err := s.bot.Send(video)
+			return err
 		}
 	} else {
 		return fmt.Errorf("no file ID or URL provided")
 	}
-
-	if caption != "" {
-		video.Caption = caption
-	}
-
-	_, err := s.bot.Send(video)
-	return err
 }
 
 // sendDocumentMessage sends a document with optional caption

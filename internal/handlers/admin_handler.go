@@ -64,10 +64,19 @@ func (h *AdminHandler) handleAdminMessage(message *tgbotapi.Message, telegramID 
 		return
 	}
 
-	// Handle photo uploads (only if not in any state)
+	// Handle media uploads (only if not in any state)
 	if message.Photo != nil {
 		h.handlePhotoUpload(message, telegramID)
 		return
+	}
+
+	// Handle video uploads for broadcast
+	if message.Video != nil || message.VideoNote != nil || (message.Document != nil && strings.HasPrefix(message.Document.MimeType, "video/")) {
+		// Check if we're in a broadcast state
+		if state, exists := h.adminStates[telegramID]; exists && strings.HasPrefix(state, "broadcast_") {
+			h.handleBroadcastContent(message, telegramID, state)
+			return
+		}
 	}
 
 	// Handle navigation buttons that should clear any state
@@ -659,7 +668,14 @@ func (h *AdminHandler) startBroadcastVideo(telegramID int64) {
 		ContentType: "video",
 	}
 
-	msg := tgbotapi.NewMessage(telegramID, "🎥 ویدیو پیام همگانی را ارسال کنید:\n\n💡 برای لغو، روی ❌ لغو عملیات کلیک کنید")
+	msg := tgbotapi.NewMessage(telegramID, `🎥 ویدیو پیام همگانی را ارسال کنید:
+
+📱 انواع ویدیو قابل قبول:
+• ویدیو عادی (Video)
+• ویدیو دایره‌ای (Video Note)
+• فایل ویدیو (Document)
+
+💡 برای لغو، روی ❌ لغو عملیات کلیک کنید`)
 	msg.ReplyMarkup = keyboards.CancelOperationKeyboard()
 	h.bot.Send(msg)
 }
@@ -775,10 +791,34 @@ func (h *AdminHandler) handleBroadcastContent(message *tgbotapi.Message, telegra
 		h.bot.Send(msg)
 
 	case "broadcast_video":
+		// Handle different types of video content
 		if message.Video != nil {
 			preview.FileID = message.Video.FileID
 			preview.HasFile = true
+			log.Printf("Video received: FileID=%s, Duration=%d, Width=%d, Height=%d",
+				message.Video.FileID, message.Video.Duration, message.Video.Width, message.Video.Height)
+		} else if message.VideoNote != nil {
+			// VideoNote (circular video) - treat as video
+			preview.FileID = message.VideoNote.FileID
+			preview.HasFile = true
+			log.Printf("VideoNote received: FileID=%s, Duration=%d, Length=%d",
+				message.VideoNote.FileID, message.VideoNote.Duration, message.VideoNote.Length)
+		} else if message.Document != nil {
+			// Check if document is a video file
+			if strings.HasPrefix(message.Document.MimeType, "video/") {
+				preview.FileID = message.Document.FileID
+				preview.HasFile = true
+				log.Printf("Video Document received: FileID=%s, MimeType=%s, FileName=%s",
+					message.Document.FileID, message.Document.MimeType, message.Document.FileName)
+			} else {
+				h.sendMessage(telegramID, "❌ فایل ارسال شده ویدیو نیست. لطفاً یک ویدیو ارسال کنید.")
+				return
+			}
+		} else {
+			h.sendMessage(telegramID, "❌ ویدیو دریافت نشد. لطفاً یک ویدیو ارسال کنید.")
+			return
 		}
+
 		h.adminStates[telegramID] = "broadcast_video_caption"
 		msg := tgbotapi.NewMessage(telegramID, "📝 کپشن ویدیو را وارد کنید (اختیاری):\n\n💡 برای رد کردن کپشن، روی ⏭ رد کردن کپشن کلیک کنید")
 		msg.ReplyMarkup = keyboards.SkipCaptionKeyboard()
@@ -855,7 +895,7 @@ func (h *AdminHandler) showBroadcastPreview(telegramID int64, preview *models.Br
 		userCount = 0
 	}
 
-	message := fmt.Sprintf("📢 پیش‌نمایش پیام همگانی\n\n")
+	message := "📢 پیش‌نمایش پیام همگانی\n\n"
 	message += fmt.Sprintf("📊 تعداد کاربران: %d\n", userCount)
 	message += fmt.Sprintf("📝 نوع محتوا: %s\n\n", preview.ContentType)
 
