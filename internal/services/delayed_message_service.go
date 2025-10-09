@@ -52,7 +52,7 @@ func (s *DelayedMessageService) ScheduleWelcomeFollowUp(userID int64, userName s
 
 چــیــشــد گلادیاتور دکمه شیشه ای رو کلیک کردی برا ورود به ربات⁉️
 
-امیدوارم از چالش 5 روزه عملگرایی لذت ببری! 🌟`, userName)
+امیدوارم از چالش 3 روزه عملگرایی لذت ببری! 🌟`, userName)
 
 	// Schedule message to be sent after 1 minute
 	s.ScheduleDelayedMessage(userID, followUpMessage, 1*time.Minute)
