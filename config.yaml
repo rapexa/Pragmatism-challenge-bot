@@ -13,7 +13,7 @@ database:
   name: "telegram_bot"
 
 video:
-  message_id: 2  # Default message ID from channel
+  message_id: 4  # Default message ID from channel
 
 server:
   url: "http://localhost:8081"  # Your server URL for serving uploaded files
