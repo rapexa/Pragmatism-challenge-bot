@@ -42,6 +42,7 @@ func main() {
 	smsService := services.NewSMSService(&cfg.SMS)
 	broadcastService := services.NewBroadcastService(db, bot)
 	delayedMessageService := services.NewDelayedMessageService(db, bot)
+	channelService := services.NewChannelService(bot, &cfg.Telegram)
 
 	// Initialize test support staff data
 	err = supportService.InitializeTestData()
@@ -56,7 +57,7 @@ func main() {
 	}
 
 	// Initialize bot handler
-	botHandler := handlers.NewBotHandler(bot, userService, supportService, adminPanelService, configService, fileService, smsService, broadcastService, delayedMessageService, cfg)
+	botHandler := handlers.NewBotHandler(bot, userService, supportService, adminPanelService, configService, fileService, smsService, broadcastService, delayedMessageService, channelService, cfg)
 
 	// Set up webhook or polling
 	u := tgbotapi.NewUpdate(0)

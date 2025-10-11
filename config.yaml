@@ -2,6 +2,8 @@ telegram:
   token: "8393627945:AAHkKTFifa26510j33mDC8jJBnsQPUhK-VQ"
   channel_id: -1002962445949  # Channel ID: upload files (@uploadrobotfile)
   group_link: "https://t.me/+AGayy6YDChBmMjM0"  # Group link
+  mandatory_channel_id: -1001976057034  # Mandatory channel ID (@hoseinmehri_ir1)
+  mandatory_channel_username: "@hoseinmehri_ir1"  # Mandatory channel username
 
 database:
   host: "localhost"

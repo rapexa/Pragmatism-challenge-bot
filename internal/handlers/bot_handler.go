@@ -22,11 +22,12 @@ type BotHandler struct {
 	smsService            *services.SMSService
 	broadcastService      *services.BroadcastService
 	delayedMessageService *services.DelayedMessageService
+	channelService        *services.ChannelService
 	adminHandler          *AdminHandler
 	config                *config.Config
 }
 
-func NewBotHandler(bot *tgbotapi.BotAPI, userService *services.UserService, supportService *services.SupportService, adminPanelService *services.AdminPanelService, configService *services.ConfigService, fileService *services.FileService, smsService *services.SMSService, broadcastService *services.BroadcastService, delayedMessageService *services.DelayedMessageService, cfg *config.Config) *BotHandler {
+func NewBotHandler(bot *tgbotapi.BotAPI, userService *services.UserService, supportService *services.SupportService, adminPanelService *services.AdminPanelService, configService *services.ConfigService, fileService *services.FileService, smsService *services.SMSService, broadcastService *services.BroadcastService, delayedMessageService *services.DelayedMessageService, channelService *services.ChannelService, cfg *config.Config) *BotHandler {
 	adminHandler := NewAdminHandler(bot, adminPanelService, configService, fileService, broadcastService, cfg)
 
 	return &BotHandler{
@@ -38,6 +39,7 @@ func NewBotHandler(bot *tgbotapi.BotAPI, userService *services.UserService, supp
 		smsService:            smsService,
 		broadcastService:      broadcastService,
 		delayedMessageService: delayedMessageService,
+		channelService:        channelService,
 		adminHandler:          adminHandler,
 		config:                cfg,
 	}
@@ -60,6 +62,12 @@ func (h *BotHandler) HandleUpdate(update tgbotapi.Update) {
 		return
 	}
 
+	// Handle callback queries (like "عضویت کردم" button)
+	if update.CallbackQuery != nil {
+		h.handleCallbackQuery(update.CallbackQuery)
+		return
+	}
+
 	// Handle regular user updates
 	if update.Message != nil {
 		h.handleMessage(update.Message)
@@ -68,6 +76,17 @@ func (h *BotHandler) HandleUpdate(update tgbotapi.Update) {
 
 func (h *BotHandler) handleMessage(message *tgbotapi.Message) {
 	telegramID := message.From.ID
+
+	// Check if user is member of mandatory channel first
+	isMember, err := h.channelService.IsUserMemberOfMandatoryChannel(telegramID)
+	if err != nil {
+		log.Printf("Error checking channel membership: %v", err)
+		// Continue with normal flow if we can't check membership
+	} else if !isMember {
+		// User is not member of mandatory channel
+		h.channelService.SendMandatoryChannelJoinMessage(telegramID)
+		return
+	}
 
 	// Check if user is already registered
 	user, support, err := h.userService.GetUserWithSupport(telegramID)
@@ -414,6 +433,40 @@ func (h *BotHandler) sendVideoWithSupportAndCaption(telegramID int64, support *m
 
 		// Schedule delayed follow-up message after 1 minute
 		h.delayedMessageService.ScheduleGroupLinkFollowUp(telegramID)
+	}
+}
+
+func (h *BotHandler) handleCallbackQuery(callback *tgbotapi.CallbackQuery) {
+	telegramID := callback.From.ID
+	data := callback.Data
+
+	// Answer callback query first
+	h.bot.Request(tgbotapi.NewCallback(callback.ID, ""))
+
+	switch data {
+	case "check_membership":
+		h.handleMembershipCheck(telegramID)
+	default:
+		// Unknown callback
+		log.Printf("Unknown callback data: %s", data)
+	}
+}
+
+func (h *BotHandler) handleMembershipCheck(telegramID int64) {
+	// Check if user is member of mandatory channel
+	isMember, err := h.channelService.IsUserMemberOfMandatoryChannel(telegramID)
+	if err != nil {
+		log.Printf("Error checking channel membership: %v", err)
+		h.sendMessage(telegramID, "خطایی در بررسی عضویت رخ داده است. لطفاً دوباره تلاش کنید.")
+		return
+	}
+
+	if isMember {
+		// User is member, proceed with normal flow
+		h.sendMessage(telegramID, "✅ عالی! شما در کانال عضو هستید.\n\nحالا می‌توانید از ربات استفاده کنید. دستور /start را ارسال کنید.")
+	} else {
+		// User is still not member
+		h.sendMessage(telegramID, "❌ شما هنوز در کانال عضو نشده‌اید.\n\nلطفاً ابتدا در کانال عضو شوید و سپس دوباره روی دکمه کلیک کنید.")
 	}
 }
 

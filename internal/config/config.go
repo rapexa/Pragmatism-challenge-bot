@@ -15,9 +15,11 @@ type Config struct {
 }
 
 type TelegramConfig struct {
-	Token     string `mapstructure:"token"`
-	ChannelID int64  `mapstructure:"channel_id"`
-	GroupLink string `mapstructure:"group_link"`
+	Token                    string `mapstructure:"token"`
+	ChannelID                int64  `mapstructure:"channel_id"`
+	GroupLink                string `mapstructure:"group_link"`
+	MandatoryChannelID       int64  `mapstructure:"mandatory_channel_id"`
+	MandatoryChannelUsername string `mapstructure:"mandatory_channel_username"`
 }
 
 type DatabaseConfig struct {

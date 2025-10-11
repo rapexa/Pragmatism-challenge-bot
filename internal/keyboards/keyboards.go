@@ -1,6 +1,8 @@
 package keyboards
 
 import (
+	"fmt"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -108,6 +110,19 @@ func PhotoUploadKeyboard() tgbotapi.ReplyKeyboardMarkup {
 // RemoveKeyboard returns an empty keyboard to remove current keyboard
 func RemoveKeyboard() tgbotapi.ReplyKeyboardRemove {
 	return tgbotapi.NewRemoveKeyboard(true)
+}
+
+// MandatoryChannelJoinKeyboard returns keyboard for joining mandatory channel
+func MandatoryChannelJoinKeyboard(channelUsername string) tgbotapi.InlineKeyboardMarkup {
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("📢 عضویت در کانال", fmt.Sprintf("https://t.me/%s", channelUsername[1:])), // Remove @ from username
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("✅ عضو شدم", "check_membership"),
+		),
+	)
+	return keyboard
 }
 
 // Broadcast keyboards
