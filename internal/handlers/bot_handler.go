@@ -272,16 +272,6 @@ func (h *BotHandler) handleJobInput(telegramID int64, job string) {
 		return
 	}
 
-	// Send SMS notification
-	go func() {
-		smsErr := h.smsService.SendRegistrationSMS(state.PhoneNumber, state.FirstName)
-		if smsErr != nil {
-			log.Printf("Error sending registration SMS: %v", smsErr)
-		} else {
-			log.Printf("Registration SMS sent successfully to %s", state.PhoneNumber)
-		}
-	}()
-
 	successMessage := `🎉 تبریک! ثبت نام شما با موفقیت تکمیل شد!
 
 📱 پیامک تأیید به شماره شما ارسال شد
@@ -292,13 +282,26 @@ func (h *BotHandler) handleJobInput(telegramID int64, job string) {
 
 	h.sendMessage(telegramID, successMessage)
 
-	// Get user with support info for sending video
+	// Get user with support info for sending video and SMS
 	_, support, err := h.userService.GetUserWithSupport(telegramID)
 	if err != nil || support == nil {
 		log.Printf("Error getting user support info: %v", err)
 		h.sendMessage(telegramID, "خطایی در دریافت اطلاعات پشتیبانی رخ داده است.")
 		return
 	}
+
+	// Send SMS notification with coach name
+	go func() {
+		smsErr := h.smsService.SendRegistrationSMSWithCoach(state.PhoneNumber, state.FirstName, support.Name)
+		if smsErr != nil {
+			log.Printf("Error sending registration SMS: %v", smsErr)
+		} else {
+			log.Printf("Registration SMS sent successfully to %s with coach %s", state.PhoneNumber, support.Name)
+		}
+	}()
+
+	// Schedule voice call after 1 minute
+	h.delayedMessageService.ScheduleVoiceCallAfterRegistration(telegramID, state.PhoneNumber)
 
 	// Send video with support info
 	h.sendVideoWithSupport(telegramID, support)
@@ -314,7 +317,7 @@ func (h *BotHandler) sendWelcomeBackMessage(telegramID int64, user *models.User,
 	h.sendMessage(telegramID, welcomeBackMessage)
 
 	// Send video with different caption for returning users
-	h.sendVideoWithSupportAndCaption(telegramID, support, `💎ورود شما گلادیاتور قدرتمند رو به چالش 5روز عملگرایی تبریک میگم💎
+	h.sendVideoWithSupportAndCaption(telegramID, support, `💎ورود شما گلادیاتور قدرتمند رو به چالش 3روز عملگرایی تبریک میگم💎
 
 لطفا با دقت ویدیو آموزشی بالا رو ببینید😍
 تا بدونید در طی این 5روزه قرار چه اتفاق بزرگی در کنارهم رقم بزنیم✅`)
@@ -324,7 +327,7 @@ func (h *BotHandler) sendWelcomeBackMessage(telegramID int64, user *models.User,
 }
 
 func (h *BotHandler) sendVideoWithSupport(telegramID int64, support *models.SupportStaff) {
-	h.sendVideoWithSupportAndCaption(telegramID, support, `💎ورود شما گلادیاتور قدرتمند رو به چالش 5روز عملگرایی تبریک میگم💎
+	h.sendVideoWithSupportAndCaption(telegramID, support, `💎ورود شما گلادیاتور قدرتمند رو به چالش 3روز عملگرایی تبریک میگم💎
 
 لطفا با دقت ویدیو آموزشی بالا رو ببینید😍
 تا بدونید در طی این 5روزه قرار چه اتفاق بزرگی در کنارهم رقم بزنیم✅`)
@@ -384,7 +387,7 @@ func (h *BotHandler) sendVideoWithSupportAndCaption(telegramID int64, support *m
 پیام ارسال کنید
 
 
-برای عضویت در گروه چالش 5روزه
+برای عضویت در گروه چالش 3روزه
 روی دکمه شیشه ای کلیک کنید👇`,
 			support.Name,
 			support.Username,
@@ -415,7 +418,7 @@ func (h *BotHandler) sendVideoWithSupportAndCaption(telegramID int64, support *m
 پیام ارسال کنید
 
 
-برای عضویت در گروه چالش 5روزه
+برای عضویت در گروه چالش 3روزه
 روی دکمه شیشه ای کلیک کنید👇`,
 			support.Name,
 			support.Username,

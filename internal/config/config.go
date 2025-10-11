@@ -12,6 +12,7 @@ type Config struct {
 	Video    VideoConfig    `mapstructure:"video"`
 	Server   ServerConfig   `mapstructure:"server"`
 	SMS      SMSConfig      `mapstructure:"sms"`
+	Avanak   AvanakConfig   `mapstructure:"avanak"`
 }
 
 type TelegramConfig struct {
@@ -44,6 +45,13 @@ type SMSConfig struct {
 	FromNumber string            `mapstructure:"from_number"`
 	BaseURL    string            `mapstructure:"base_url"`
 	Patterns   map[string]string `mapstructure:"patterns"`
+}
+
+type AvanakConfig struct {
+	Token     string `mapstructure:"token"`
+	MessageID int    `mapstructure:"message_id"`
+	BaseURL   string `mapstructure:"base_url"`
+	Enabled   bool   `mapstructure:"enabled"`
 }
 
 func Load() *Config {

@@ -88,3 +88,13 @@ func (s *SMSService) SendRegistrationSMS(phone, firstName string) error {
 
 	return s.SendSMS(phone, params, "registration")
 }
+
+// SendRegistrationSMSWithCoach sends registration success SMS with coach name
+func (s *SMSService) SendRegistrationSMSWithCoach(phone, firstName, coachName string) error {
+	params := map[string]string{
+		"name":  firstName,
+		"coach": coachName,
+	}
+
+	return s.SendSMS(phone, params, "registration")
+}

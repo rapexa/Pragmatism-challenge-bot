@@ -41,7 +41,8 @@ func main() {
 	fileService := services.NewFileService(bot, cfg.Server.URL)
 	smsService := services.NewSMSService(&cfg.SMS)
 	broadcastService := services.NewBroadcastService(db, bot)
-	delayedMessageService := services.NewDelayedMessageService(db, bot)
+	avanakService := services.NewAvanakService(&cfg.Avanak)
+	delayedMessageService := services.NewDelayedMessageService(db, bot, avanakService)
 	channelService := services.NewChannelService(bot, &cfg.Telegram)
 
 	// Initialize test support staff data

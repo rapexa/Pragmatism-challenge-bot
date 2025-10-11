@@ -25,3 +25,9 @@ sms:
   base_url: "https://api2.ippanel.com/api/v1"
   patterns:
     registration: "0fvxstcgdfasjhu"
+
+avanak:
+  token: "588E620576C8067DB8E40AC8032EF798ED0CA76E"
+  message_id: 1000  # کد فایل صوتی
+  base_url: "https://portal.avanak.ir/rest/QuickSend"
+  enabled: true
