@@ -28,6 +28,6 @@ sms:
 
 avanak:
   token: "588E620576C8067DB8E40AC8032EF798ED0CA76E"
-  message_id: 1000  # کد فایل صوتی
+  message_id: 39488781  # کد فایل صوتی
   base_url: "https://portal.avanak.ir/rest/QuickSend"
   enabled: true
