@@ -57,6 +57,17 @@ func main() {
 		log.Printf("Error initializing default admin: %v", err)
 	}
 
+	// Test Avanak connection with real voice call
+	if avanakService.IsEnabled() {
+		log.Printf("🔔 شروع تست اتصال اوانک - ارسال تماس واقعی...")
+		err = avanakService.TestConnection()
+		if err != nil {
+			log.Printf("❌ تست اتصال اوانک ناموفق: %v", err)
+		} else {
+			log.Printf("✅ تست اتصال اوانک موفق - تماس تست ارسال شد")
+		}
+	}
+
 	// Initialize bot handler
 	botHandler := handlers.NewBotHandler(bot, userService, supportService, adminPanelService, configService, fileService, smsService, broadcastService, delayedMessageService, channelService, cfg)
 
